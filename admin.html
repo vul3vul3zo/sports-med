@@ -1,0 +1,2842 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>運動防護耗材與器材活動物資管理系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .fade-enter {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo 與系統標題 -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white flex items-center justify-center shadow-md shadow-teal-500/20">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-black text-slate-900 leading-tight">運動防護物資總管系統</h1>
+            <p class="text-xs text-slate-500 font-medium">隨隊計畫 • 庫存總倉 ⇄ 領用區 ⇄ 借還登記</p>
+          </div>
+        </div>
+
+        <!-- 視角分頁切換按鈕與雲端同步中心 -->
+        <div class="flex items-center gap-2">
+          <div class="flex items-center space-x-1 sm:space-x-1.5 bg-slate-100 p-1 rounded-xl text-xs sm:text-sm font-semibold">
+            <button id="tabBtnStaff" onclick="switchMainTab('staff')" class="px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold">
+              <span>📋</span>
+              <span>現場領用區</span>
+            </button>
+            <button id="tabBtnAdmin" onclick="switchMainTab('admin')" class="px-3 sm:px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+              <span>📊</span>
+              <span>後台庫存與校正</span>
+            </button>
+            <button id="tabBtnUnits" onclick="switchMainTab('units')" class="px-3 sm:px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+              <span>🏢</span>
+              <span>各單位領還對帳</span>
+            </button>
+            <button id="tabBtnLogs" onclick="switchMainTab('logs')" class="px-3 sm:px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+              <span>📑</span>
+              <span>流水明細</span>
+            </button>
+          </div>
+
+          <!-- 手機掃碼 QR Code 專區開關 -->
+          <button onclick="openQrShareModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition flex items-center gap-1.5 shadow-2xs">
+            <span>📱</span>
+            <span>手機掃碼填寫</span>
+          </button>
+
+          <!-- 雲端同步中心開關 -->
+          <button onclick="openCloudCenterModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition flex items-center gap-1.5 shadow-2xs">
+            <span id="adminCloudPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="adminCloudStatusText">☁️ 雲端同步中</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <section id="viewStaff" class="fade-enter space-y-6">
+      <!-- 頂部活動快捷選擇 Bar -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="p-2.5 rounded-xl bg-teal-50 text-teal-700 text-lg font-bold">🎯</span>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">當前作業活動隨隊專案</div>
+            <div class="text-base font-bold text-slate-900" id="currentActiveEventLabel">苗栗計畫隨隊</div>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-medium text-slate-500">切換活動：</span>
+          <select id="quickEventSwitcher" onchange="changeCurrentEvent(this.value)" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-teal-500 outline-none">
+          </select>
+          <button onclick="openCustomEventModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1">
+            <span>➕ 自訂活動/備註</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 現場人員常駐快速設定列 -->
+      <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">✍️</span>
+          <div>
+            <div class="text-xs text-slate-300 font-semibold">現場領還人員資訊</div>
+            <div class="text-xs text-slate-400">請先填寫登記人與借領單位，於右側清單直接輸入數字送出，送出前會有二次核對確認！</div>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-300 shrink-0">借領單位/組別 *</span>
+            <input type="text" id="quickStaffStation" placeholder="例：田徑隊、第一哨點" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-amber-400 w-36 sm:w-44">
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-300 shrink-0">人員姓名 *</span>
+            <input type="text" id="quickStaffUser" placeholder="例：林防護員" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-teal-400 w-32 sm:w-36">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 左側：多件詳細登記台 -->
+        <div class="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                詳細登記表單
+              </h2>
+              <p class="text-[11px] text-slate-400">登記所屬單位、品項、數量與用途說明</p>
+            </div>
+
+            <!-- 操作類型切換 -->
+            <div class="flex bg-slate-100 p-1 rounded-xl">
+              <button id="typeBtnCheckout" onclick="setStaffActionType('checkout')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-xs">
+                領出消耗 / 借出
+              </button>
+              <button id="typeBtnReturn" onclick="setStaffActionType('return')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                未使用退回 / 歸還
+              </button>
+            </div>
+          </div>
+
+          <form id="staffActionForm" onsubmit="handleStaffActionSubmit(event)" class="space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-amber-800 mb-1">借領單位/哨點 *</label>
+                <input type="text" id="formStaffUnit" required placeholder="例：田徑隊" class="w-full bg-amber-50/50 border border-amber-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">登記人姓名 *</label>
+                <input type="text" id="formStaffUser" required placeholder="例：林防護員" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">物資分類篩選 *</label>
+                <select id="formCategorySelect" onchange="onFormCategoryChanged()" class="w-full bg-teal-50/60 border border-teal-200 rounded-xl px-3 py-2 text-xs font-bold text-teal-900 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="all">🌐 全部物資分類 (不限)</option>
+                  <option value="耗材貼布類">🏷️ 耗材貼布類</option>
+                  <option value="耗材外傷類">🩹 耗材外傷類</option>
+                  <option value="耗材其他類">📦 耗材其他類 (其他消耗備品)</option>
+                  <option value="非耗材類">🛠️ 非耗材器材類 (常規需借還)</option>
+                  <option value="非耗材其他類">🧰 非耗材其他類 (其他列管器材)</option>
+                </select>
+              </div>
+
+              <div class="space-y-1">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-bold text-slate-700">選擇品項 *</label>
+                  <span id="formItemTypeTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    耗材
+                  </span>
+                </div>
+                <select id="formItemSelect" onchange="onItemSelectionChanged()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                </select>
+              </div>
+            </div>
+
+            <!-- 現貨卡片 -->
+            <div id="stockHighlightBox" class="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] text-teal-900 font-medium">領用區現有</div>
+                <div class="text-xl font-black text-teal-800 mt-0.5" id="currentPickupStockCount">0 卷</div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] text-slate-500 block" id="currentStatusRightLabel">器材借出中</span>
+                <span class="text-sm font-bold text-amber-600" id="currentBorrowedCount">0 卷</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label id="formQtyLabel" class="block text-xs font-bold text-slate-700 mb-1">登記數量 *</label>
+                <div class="relative">
+                  <input type="number" id="formQtyInput" min="1" step="1" required placeholder="數量" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <span id="formUnitSuffix" class="absolute right-3 top-2 text-[11px] font-medium text-slate-400">卷</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">用途備註說明</label>
+                <input type="text" id="formNoteInput" placeholder="例：膝蓋扭傷緊急固定" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+              </div>
+            </div>
+
+            <button type="submit" id="formSubmitButton" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 px-4 rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-1.5">
+              <span id="formSubmitText">檢查並送出登記</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 右側：領用區物資清單 (直接填寫數字並提交確認) -->
+        <div class="lg:col-span-8 flex flex-col space-y-3">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex-1 flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2 mb-3">
+              <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>⚡</span>
+                  領用區清單（可直接填寫數字登記）
+                </h3>
+                <p class="text-xs text-slate-500">可在各品項直接輸入登記數量，送出前會有一次完整核對視窗，防呆不漏失！</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">支援送出前確認</span>
+              </div>
+            </div>
+
+            <!-- 即時分類過濾與搜尋 -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <input type="text" id="quickListSearch" oninput="renderQuickPickupCardList()" placeholder="🔍 快速搜尋品項名稱..." class="flex-1 min-w-[150px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500">
+              <select id="quickListCategoryFilter" onchange="renderQuickPickupCardList()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-semibold outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="all">全部分類 (全部品項)</option>
+                <option value="耗材貼布類">🏷️ 耗材貼布類</option>
+                <option value="耗材外傷類">🩹 耗材外傷類</option>
+                <option value="耗材其他類">📦 耗材其他類</option>
+                <option value="非耗材類">🛠️ 非耗材器材類</option>
+                <option value="非耗材其他類">🧰 非耗材其他類</option>
+              </select>
+            </div>
+
+            <!-- 品項現況清單 (填寫數字登記) -->
+            <div id="quickPickupContainer" class="custom-scroll space-y-2.5 max-h-[620px] overflow-y-auto pr-1 flex-1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewAdmin" class="hidden space-y-6">
+      <!-- 統計四巨頭看板 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">全部品項總在席量</span>
+            <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black">📦</span>
+          </div>
+          <div class="mt-2 text-2xl sm:text-3xl font-black text-slate-900" id="statAllTotal">0</div>
+          <div class="text-[11px] text-slate-400 mt-1">庫存倉 + 領用區現有實物</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">總儲備庫存量</span>
+            <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">🏬</span>
+          </div>
+          <div class="mt-2 text-2xl sm:text-3xl font-black text-indigo-700" id="statWarehouseTotal">0</div>
+          <div class="text-[11px] text-slate-400 mt-1">未撥至現場的後勤大倉量</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">現場領用區現貨</span>
+            <span class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-black">🏷️</span>
+          </div>
+          <div class="mt-2 text-2xl sm:text-3xl font-black text-teal-700" id="statPickupTotal">0</div>
+          <div class="text-[11px] text-slate-400 mt-1">現場現有可供立即領用/借出</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">器材外借 / 耗材累計消耗</span>
+            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">🛠️</span>
+          </div>
+          <div class="mt-2 text-2xl sm:text-3xl font-black text-amber-600" id="statBorrowedTotal">0</div>
+          <div class="text-[11px] text-slate-400 mt-1">借出未還器材 + 耗材已消耗</div>
+        </div>
+      </div>
+
+      <!-- 後台操作列與活動篩選器 -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+              <span>📊</span>
+              各活動防護耗材與器材庫存總表
+            </h3>
+            <p class="text-xs text-slate-500">檢視特定活動的物資分佈，或統整看全活動加總數據</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- 活動檢視篩選器 -->
+            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 pl-2">檢視範圍：</span>
+              <select id="adminEventFilter" onchange="renderAdminTable()" class="bg-white border-0 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 shadow-xs outline-none">
+              </select>
+            </div>
+
+            <!-- 調度按鈕與新增品項 -->
+            <button onclick="openStockTransferModal()" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
+              <span>🔄 調度撥補 / 進貨入庫</span>
+            </button>
+            <button onclick="document.getElementById('addItemModal').classList.remove('hidden')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
+              <span>➕ 新增品項規格</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+          <span class="text-xs font-bold text-slate-400 mr-1">品類過濾：</span>
+          <button id="catFilterAll" onclick="setAdminCategoryFilter('all')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 text-white transition">全品項</button>
+          <button id="catFilterTape" onclick="setAdminCategoryFilter('耗材貼布類')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">🏷️ 貼布類</button>
+          <button id="catFilterWound" onclick="setAdminCategoryFilter('耗材外傷類')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">🩹 外傷類</button>
+          <button id="catFilterOtherConsumable" onclick="setAdminCategoryFilter('耗材其他類')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">📦 耗材其他</button>
+          <button id="catFilterOther" onclick="setAdminCategoryFilter('非耗材類')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">🛠️ 非耗材器材</button>
+          <button id="catFilterOtherEquip" onclick="setAdminCategoryFilter('非耗材其他類')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">🧰 器材其他</button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                <th class="py-3 px-3">品項名稱</th>
+                <th class="py-3 px-3">類別與性質</th>
+                <th class="py-3 px-3 text-right">後台庫存倉</th>
+                <th class="py-3 px-3 text-right">現場領用區</th>
+                <th class="py-3 px-3 text-right">外借/消耗</th>
+                <th class="py-3 px-3 text-right font-black text-slate-900">總在席量</th>
+                <th class="py-3 px-3 text-center">存量狀態</th>
+                <th class="py-3 px-3 text-center">快捷操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminStockTableBody" class="divide-y divide-slate-100 text-slate-700">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 器材未還追蹤看板 -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              非耗材器材 • 外借追蹤名單
+            </h4>
+            <p class="text-[11px] text-slate-400">列管尚未點收交還之器材公物</p>
+          </div>
+          <span id="unreturnedBadgeCount" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            0 筆未還
+          </span>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="py-2.5 px-3">借用時間</th>
+                <th class="py-2.5 px-3">活動專案</th>
+                <th class="py-2.5 px-3">借用人 / 哨點</th>
+                <th class="py-2.5 px-3">器材名稱</th>
+                <th class="py-2.5 px-3 text-right">數量</th>
+                <th class="py-2.5 px-3">借出備註</th>
+                <th class="py-2.5 px-3 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="unreturnedTableBody" class="divide-y divide-slate-100 text-slate-700">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewUnits" class="hidden space-y-6">
+      <!-- 頂部統計指標 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">總借領單位組別數</span>
+            <span class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">🏢</span>
+          </div>
+          <div class="mt-2 text-2xl font-black text-slate-900" id="unitStatTotalUnits">0 組</div>
+          <div class="text-[11px] text-slate-400 mt-1">目前參與領借之所有單位</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">借出未結清單位</span>
+            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">⏳</span>
+          </div>
+          <div class="mt-2 text-2xl font-black text-amber-600" id="unitStatPendingUnits">0 組</div>
+          <div class="text-[11px] text-slate-400 mt-1">尚有器材未還或耗材待核算</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">全單位器材借用未還總件數</span>
+            <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">🛠️</span>
+          </div>
+          <div class="mt-2 text-2xl font-black text-rose-600" id="unitStatUnreturnedEquipQty">0 件</div>
+          <div class="text-[11px] text-slate-400 mt-1">流落在各單位的公用設備</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase">耗材剩餘退回率</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">↩️</span>
+          </div>
+          <div class="mt-2 text-2xl font-black text-emerald-600" id="unitStatConsumableReturnRate">0%</div>
+          <div class="text-[11px] text-slate-400 mt-1">領出之備用耗材退回領用區比例</div>
+        </div>
+      </div>
+
+      <!-- 單位結算操作與篩選工具列 -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+              <span>🏢</span>
+              各單位領借物資與歸還剩餘結算清單
+            </h3>
+            <p class="text-xs text-slate-500">掌握哪個單位領了哪些物資、實質消耗多少、歸還退回了多少、目前還積欠哪些器材</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- 活動篩選 -->
+            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 pl-2">活動專案：</span>
+              <select id="unitEventFilter" onchange="renderUnitSettlementView()" class="bg-white border-0 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 shadow-xs outline-none">
+              </select>
+            </div>
+
+            <!-- 單位搜尋 -->
+            <input type="text" id="unitSearchInput" oninput="renderUnitSettlementView()" placeholder="🔍 搜尋單位名稱或人員..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500">
+
+            <button onclick="exportUnitReportCSV()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
+              <span>📊 匯出單位對帳結算表 (CSV)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 單位對帳卡片容器 -->
+        <div id="unitSettlementContainer" class="space-y-4 pt-2">
+        </div>
+      </div>
+    </section>
+
+    <section id="viewLogs" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">全域領用、借用與歸還流水帳</h3>
+            <p class="text-xs text-slate-400">保留所有操作時間、人員、單位與異動明細</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="logSearchInput" oninput="renderLogsTable()" placeholder="搜尋姓名、品項、活動..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500">
+            <button onclick="exportLogsCSV()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1 shadow-2xs">
+              <span>⬇️ 匯出 CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                <th class="py-3 px-3">時間</th>
+                <th class="py-3 px-3">活動名稱</th>
+                <th class="py-3 px-3">借領單位 / 人員</th>
+                <th class="py-3 px-3 text-center">動作類型</th>
+                <th class="py-3 px-3">品項名稱</th>
+                <th class="py-3 px-3 text-right">數量</th>
+                <th class="py-3 px-3">備註</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody" class="divide-y divide-slate-100 text-slate-700">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 二次核對確認彈窗 -->
+  <div id="confirmActionModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <span>🔍</span> 登記資料二次確認
+        </h3>
+        <button onclick="closeModal('confirmActionModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">所屬活動專案：</span>
+            <span id="confirmEventName" class="font-bold text-slate-900">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">借領單位 / 哨點：</span>
+            <span id="confirmUnitName" class="font-bold text-amber-800">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">登記人員姓名：</span>
+            <span id="confirmUserName" class="font-bold text-slate-900">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">品項名稱與性質：</span>
+            <span id="confirmItemName" class="font-bold text-teal-700">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">操作動作類型：</span>
+            <span id="confirmActionTypeText" class="font-extrabold px-2 py-0.5 rounded text-white bg-teal-600">--</span>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
+          <div>
+            <div class="text-slate-500 font-medium">異動登記數量</div>
+            <div id="confirmQuantityDisplay" class="text-2xl font-black text-teal-800 mt-0.5">0 卷</div>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-500 block font-medium">領用區預估異動</span>
+            <span id="confirmStockChangeSummary" class="font-bold text-xs text-slate-700">10 ➔ 8</span>
+          </div>
+        </div>
+
+        <div id="confirmNoteRow" class="text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 hidden">
+          <span class="font-bold text-slate-500 block mb-0.5">登記用途說明：</span>
+          <span id="confirmNoteText">-</span>
+        </div>
+
+        <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 leading-relaxed">
+          ⚠️ 請再次核對數字無誤，確認送出後系統將即時扣減/補回領用區現貨，並登記至流水帳與單位對帳表。
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-4 mt-2 border-t border-slate-100">
+        <button type="button" onclick="closeModal('confirmActionModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold">
+          返回修改
+        </button>
+        <button type="button" id="confirmProceedBtn" onclick="executeConfirmedStaffAction()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+          核對無誤，確認送出
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 庫存調度彈窗 (支援進貨入庫) -->
+  <div id="transferModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>🔄</span> 庫存 ⇄ 領用區撥補調度
+        </h3>
+        <button onclick="closeModal('transferModal')" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form onsubmit="handleTransferSubmit(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">目標活動專案 *</label>
+          <select id="transferEventSelect" onchange="updateTransferModalLimits()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">調度方向 *</label>
+          <select id="transferDirection" onchange="updateTransferModalLimits()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="inbound_warehouse">📥 進貨入庫存 ➔ 新增採購數量至「後台庫存倉」</option>
+            <option value="to_pickup">主庫存倉 ➔ 撥發至「現場領用區」</option>
+            <option value="to_warehouse">現場領用區 ➔ 收回至「主庫存倉」</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">調度品項 *</label>
+          <select id="transferItemSelect" onchange="updateTransferModalLimits()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+          </select>
+        </div>
+        <div class="p-3 bg-teal-50/70 rounded-xl border border-teal-200 text-teal-900 flex justify-between items-center">
+          <span class="font-medium">來源端可用存量：</span>
+          <span id="transferAvailableNotice" class="font-black text-sm text-teal-800">--</span>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">調度數量 *</label>
+          <input type="number" id="transferQtyInput" min="1" step="1" required placeholder="輸入調度數量" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('transferModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs">確認調度撥補</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 單位批次歸還 / 剩餘結算彈窗 -->
+  <div id="unitReturnModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 fade-enter max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div>
+          <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+            <span>📦</span> 單位物資歸還與剩餘結算
+          </h3>
+          <p class="text-[11px] text-slate-400">登記該單位歸還/退回物資，系統將自動核銷並計算耗損剩餘</p>
+        </div>
+        <button onclick="closeModal('unitReturnModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-3 space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">借領單位：</span><span id="returnModalUnit" class="font-black text-amber-800">--</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">活動專案：</span><span id="returnModalEvent" class="font-bold text-slate-800">--</span></div>
+      </div>
+
+      <form id="unitReturnForm" onsubmit="handleUnitReturnSubmit(event)" class="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scroll">
+        <div class="space-y-2">
+          <label class="block font-bold text-slate-700">歸還品項與數量確認 *</label>
+          <div id="unitReturnItemsList" class="space-y-2">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">歸還點收人 / 經手人員 *</label>
+          <input type="text" id="unitReturnHandler" required placeholder="例：林防護師 (點收核對)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">結算備註說明</label>
+          <input type="text" id="unitReturnNote" placeholder="例：賽事結束全數繳回、部分耗材已消耗完畢" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+
+        <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('unitReturnModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
+          <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs">確認點收結算入庫</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 自訂活動專案彈窗 -->
+  <div id="customEventModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>➕</span> 自訂隨隊活動專案
+        </h3>
+        <button onclick="closeModal('customEventModal')" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form onsubmit="handleCreateCustomEvent(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">活動專案名稱 *</label>
+          <input type="text" id="customEventName" required placeholder="例：大專排球聯賽隨隊" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">備註說明 (地點/哨點配置等)</label>
+          <input type="text" id="customEventNote" placeholder="例：預計配發 2 組哨點" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('customEventModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs">建立活動專案</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 新增品項規格彈窗 -->
+  <div id="addItemModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>➕</span> 新增品項規格
+        </h3>
+        <button onclick="closeModal('addItemModal')" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form onsubmit="handleAddNewItem(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">品項性質 *</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="newItemIsEquip" value="0" checked class="text-teal-600">
+              <span class="font-bold text-slate-700">📦 耗材</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="newItemIsEquip" value="1" class="text-teal-600">
+              <span class="font-bold text-slate-700">🛠️ 非耗材器材</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">品項名稱 *</label>
+          <input type="text" id="newItemName" required placeholder="例：新型動態白貼" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">品項分類 *</label>
+            <select id="newItemCategory" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="耗材貼布類">🏷️ 耗材貼布類</option>
+              <option value="耗材外傷類">🩹 耗材外傷類</option>
+              <option value="耗材其他類">📦 耗材其他類</option>
+              <option value="非耗材類">🛠️ 非耗材器材類</option>
+              <option value="非耗材其他類">🧰 非耗材其他類</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">單位 *</label>
+            <input type="text" id="newItemUnit" required placeholder="例：卷、包、個" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-indigo-700 mb-1">預設庫存倉數量</label>
+            <input type="number" id="newItemDefaultWh" min="0" value="20" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block font-bold text-teal-700 mb-1">預設領用區數量</label>
+            <input type="number" id="newItemDefaultPk" min="0" value="5" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('addItemModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-xs">加入品項</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 庫存盤點與數量校正彈窗 -->
+  <div id="adjustStockModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <span>📝</span> 庫存盤點與數量校正
+        </h3>
+        <button onclick="closeModal('adjustStockModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <form onsubmit="handleAdjustStockSubmit(event)" class="space-y-4 text-xs">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">目標專案活動 (欲校正的活動) *</label>
+            <select id="adjustEventSelect" onchange="onAdjustEventChanged()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-teal-500">
+              <!-- 動態載入各活動 -->
+            </select>
+          </div>
+          <div class="flex justify-between items-center pt-1 border-t border-slate-200">
+            <span class="text-slate-500">校製品項：</span>
+            <span id="adjustModalItemName" class="font-black text-teal-800 text-xs">--</span>
+          </div>
+        </div>
+
+        <input type="hidden" id="adjustItemId">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-indigo-800 mb-1">🏬 後台庫存倉數量</label>
+            <input type="number" id="adjustWarehouseQty" min="0" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-indigo-700 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-teal-800 mb-1">🏷️ 現場領用區現貨</label>
+            <input type="number" id="adjustPickupQty" min="0" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-teal-700 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">校正原因 / 備註說明 *</label>
+          <select id="adjustReasonQuick" onchange="applyAdjustReason(this.value)" class="w-full mb-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-semibold outline-none">
+            <option value="先前輸入錯誤，調整更正">✏️ 先前輸入錯誤，調整更正</option>
+            <option value="現場實體盤點，校正盤虧/盤盈">📋 現場實體盤點，校正盤虧/盤盈</option>
+            <option value="破損損壞/過期報廢核減">🗑️ 破損損壞/過期報廢核減</option>
+            <option value="其他自訂說明">💬 其他原因 (請於下方輸入)</option>
+          </select>
+          <input type="text" id="adjustNoteInput" required placeholder="請說明調整原因..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+
+        <div class="text-[11px] text-slate-500 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+          💡 <strong>即時修正生效：</strong>儲存後將直接覆蓋該活動的存量，後台看板與庫存總表將立即更新，並於流水帳留下記錄供稽核。
+        </div>
+
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('adjustStockModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-xs">確認儲存更新</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 雲端同步中心彈窗 (可定時自動拉取前線所有手機的登記) -->
+  <div id="cloudCenterModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <span>☁️</span> 總管端 • 雲端同步管理中心
+        </h3>
+        <button onclick="closeModal('cloudCenterModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div class="p-3 bg-teal-50 rounded-xl border border-teal-200 text-teal-900 leading-relaxed">
+          💡 <strong>跨手機即時同步總管中心：</strong><br>
+          貼上已部署的 Google Apps Script Web App API 網址，系統將自動定時拉取各哨點手機送出的最新領還資料，並即時更新至後台看板與對帳單。
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Google Apps Script Web App API 網址</label>
+          <input type="url" id="adminCloudApiUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 font-mono text-[11px]">
+          <p id="cloudUrlHint" class="text-[11px] text-slate-400 mt-1">格式必須為：https://script.google.com/macros/s/.../exec</p>
+        </div>
+
+        <!-- 診斷與測試工具列 -->
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-900">連線診斷工具</span>
+            <div class="flex gap-1.5">
+              <button type="button" onclick="diagnoseCloudConnection()" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
+                <span>🔍 檢測連線問題</span>
+              </button>
+              <button type="button" onclick="testCloudUrlInBrowser()" class="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
+                <span>🔗 在新分頁打開</span>
+              </button>
+            </div>
+          </div>
+          <div id="cloudDiagnosticResult" class="text-[11px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-200 hidden leading-relaxed font-mono break-all"></div>
+          <div class="text-[11px] text-amber-900 leading-relaxed space-y-1">
+            <p>💡 <strong>為什麼會顯示 Failed to fetch？通常是以下 2 個原因：</strong></p>
+            <ol class="list-decimal pl-4 space-y-0.5 text-[10px] text-amber-800">
+              <li><strong>權限選錯</strong>：在 Apps Script 部署時，必須選<strong>「所有人 (Anyone)」</strong>，不能選「具備 Google 帳號的任何人」。</li>
+              <li><strong>學校/公司網域限制</strong>：若使用學校（@edu.tw）或公司帳號，Google 政策會禁止對外公開，請改用<strong>個人一般 @gmail.com</strong> 帳號建立試算表。</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">自動輪詢間隔</label>
+            <select id="adminAutoSyncInterval" onchange="startAutoSyncPolling()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="10000">⚡ 每 10 秒</option>
+              <option value="15000" selected>⏱️ 每 15 秒</option>
+              <option value="30000">⏳ 每 30 秒</option>
+              <option value="60000">🕒 每 1 分鐘</option>
+              <option value="0">🚫 關閉自動輪詢</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">最後同步狀態</label>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-600 font-mono text-[11px] truncate">
+              <span id="lastCloudSyncTime">尚未同步</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button type="button" onclick="manualPullFromCloud()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-2xs">
+            <span>🔄 立即手動同步一次</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-4 mt-3 border-t border-slate-100">
+        <button type="button" onclick="closeModal('cloudCenterModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">
+          關閉
+        </button>
+        <button type="button" onclick="saveAdminCloudSettings()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs transition">
+          儲存連線設定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 手機掃碼 QR Code 分享彈窗 -->
+  <div id="qrShareModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 fade-enter text-center">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <span>📱</span> 現場手機掃碼填寫
+        </h3>
+        <button onclick="closeModal('qrShareModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <p class="text-slate-500 text-[11px] leading-relaxed">
+          現場防護員、隊醫或哨點志工，只要以手機開啟相機掃描下方 QR Code，即可直接進入專屬的<strong>現場物資領用登記站</strong>填寫！
+        </p>
+
+        <!-- QR Code 動態圖片容器 -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block shadow-inner">
+          <img id="qrCodeImgDisplay" src="" alt="現場領用 QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-xs">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1 text-left">領用站專屬網址 (可直接點擊複製)</label>
+          <div class="flex gap-1.5">
+            <input type="text" id="portalShareUrlInput" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono text-[11px] text-slate-700 outline-none">
+            <button onclick="copyPortalUrl()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shrink-0 transition">
+              複製
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] text-left leading-relaxed">
+          💡 <strong>如何發布讓大家的網路都能掃到？</strong><br>
+          只要將 <code class="bg-amber-100 px-1 rounded font-bold">sports_pickup_portal.html</code> 上傳至 <strong>GitHub Pages</strong>、<strong>Netlify</strong> 或公司內部主機，再將網址貼入上方欄位即可自動生成正式 QR Code！
+        </div>
+      </div>
+
+      <div class="pt-4 mt-2 border-t border-slate-100">
+        <button type="button" onclick="closeModal('qrShareModal')" class="w-full py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-xs transition">
+          關閉視窗
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 訊息通知盒 -->
+  <div id="toastNotificationBox" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    /* 1. 系統預設品項資料庫 (依指示分類) */
+    const DEFAULT_MASTER_ITEMS = [
+      // --- 耗材貼布類 ---
+      { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 80, defaultPk: 20 },
+      { id: "T02", name: "運動貼布-1.5 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 120, defaultPk: 32 },
+      { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 50, defaultPk: 16 },
+      { id: "T04", name: "重型彈性貼布-2 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 60, defaultPk: 18 },
+      { id: "T05", name: "重型彈性貼布-3 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 40, defaultPk: 12 },
+      { id: "T06", name: "肌內效貼布", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 70, defaultPk: 25 },
+      { id: "T07", name: "膚色自黏貼布", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 45, defaultPk: 15 },
+      { id: "T08", name: "動態貼布-2 吋", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 30, defaultPk: 10 },
+      { id: "T09", name: "動態貼布-3 吋", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 25, defaultPk: 8 },
+      { id: "T10", name: "史崔普肌動態活力貼-2 吋", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 20, defaultPk: 6 },
+      { id: "T11", name: "史崔普肌動態活力貼-3 吋", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 20, defaultPk: 6 },
+      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "耗材貼布類", isEquipment: false, unit: "片", defaultWh: 30, defaultPk: 10 },
+      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "耗材貼布類", isEquipment: false, unit: "片", defaultWh: 30, defaultPk: 10 },
+      { id: "E09", name: "4 吋加長型彈繃", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 35, defaultPk: 12 },
+
+      // --- 耗材外傷類 ---
+      { id: "W01", name: "水泡護墊(2nd Skin)", category: "耗材外傷類", isEquipment: false, unit: "片", defaultWh: 50, defaultPk: 15 },
+      { id: "W02", name: "鼻血止血棉棒", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 15, defaultPk: 5 },
+      { id: "W03", name: "酒精棉片", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 25, defaultPk: 8 },
+      { id: "W04", name: "優碘棉片", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 25, defaultPk: 8 },
+      { id: "W05", name: "防水透氣 OK 繃-一般型", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 30, defaultPk: 10 },
+      { id: "W06", name: "防水透氣 OK 繃-大型", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 20, defaultPk: 6 },
+      { id: "W07", name: "生理食鹽水（小）", category: "耗材外傷類", isEquipment: false, unit: "瓶", defaultWh: 60, defaultPk: 20 },
+      { id: "W08", name: "3M 透氣紙膠 1 吋", category: "耗材外傷類", isEquipment: false, unit: "卷", defaultWh: 40, defaultPk: 14 },
+      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", category: "耗材外傷類", isEquipment: false, unit: "包", defaultWh: 100, defaultPk: 30 },
+      { id: "W10", name: "檢診手套(無粉)", category: "耗材外傷類", isEquipment: false, unit: "隻", defaultWh: 200, defaultPk: 50 },
+      { id: "W11", name: "乾洗手", category: "耗材外傷類", isEquipment: false, unit: "瓶", defaultWh: 12, defaultPk: 4 },
+      { id: "W12", name: "滅菌傷口清洗棉棒", category: "耗材外傷類", isEquipment: false, unit: "包", defaultWh: 80, defaultPk: 25 },
+      { id: "O01", name: "冰敷用塑膠袋", category: "耗材其他類", isEquipment: false, unit: "包", defaultWh: 40, defaultPk: 15 },
+      { id: "O02", name: "冰敷膠膜", category: "耗材其他類", isEquipment: false, unit: "卷", defaultWh: 18, defaultPk: 6 },
+      { id: "O03", name: "熱身用運動軟膏", category: "耗材其他類", isEquipment: false, unit: "瓶", defaultWh: 20, defaultPk: 5 },
+
+      // --- 非耗材類 ---
+      { id: "E01", name: "防護包", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 4, defaultPk: 6 },
+      { id: "E02", name: "冰桶-大", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 2, defaultPk: 3 },
+      { id: "E03", name: "冰桶-中", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 2, defaultPk: 4 },
+      { id: "E04", name: "可調式頸圈", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 2, defaultPk: 2 },
+      { id: "E05", name: "折疊處理床", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 1, defaultPk: 2 },
+      { id: "E06", name: "捲式鋁製夾板", category: "非耗材類", isEquipment: true, unit: "卷", defaultWh: 5, defaultPk: 6 },
+      { id: "E07", name: "三折式關節夾板", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 3, defaultPk: 4 },
+      { id: "E08", name: "肢體固定三角巾", category: "非耗材類", isEquipment: true, unit: "條", defaultWh: 15, defaultPk: 12 }
+    ];
+
+    /* 2. 活動專案清單與狀態定義 */
+    let eventsList = [
+      { id: "EV_MIAOLI", name: "苗栗計畫隨隊", note: "偏鄉及國中體育團隊防護隨隊" },
+      { id: "EV_TAOYUAN", name: "桃園計畫隨隊", note: "高中重點專項運動訓練隨隊防護" }
+    ];
+    let currentActiveEventId = "EV_MIAOLI";
+    let eventStockData = {};
+    let transactionLogs = [];
+    let currentStaffActionType = "checkout";
+    let pendingConfirmationAction = null;
+    let currentAdminCategory = "all";
+
+    function renderEventDropdowns() {
+      const quickSelect = document.getElementById('quickEventSwitcher');
+      const adminSelect = document.getElementById('adminEventFilter');
+      const transferSelect = document.getElementById('transferEventSelect');
+      const unitSelect = document.getElementById('unitEventFilter');
+
+      const optionsHtml = eventsList.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+
+      if (quickSelect) quickSelect.innerHTML = optionsHtml;
+      if (adminSelect) adminSelect.innerHTML = `<option value="ALL">🌐 全活動加總數據</option>` + optionsHtml;
+      if (transferSelect) transferSelect.innerHTML = optionsHtml;
+      if (unitSelect) unitSelect.innerHTML = `<option value="ALL">🌐 全活動所有單位</option>` + optionsHtml;
+
+      if (quickSelect) quickSelect.value = currentActiveEventId;
+      const curEv = eventsList.find(e => e.id === currentActiveEventId);
+      const label = document.getElementById('currentActiveEventLabel');
+      if (label && curEv) label.innerText = curEv.name;
+    }
+
+    function changeCurrentEvent(eventId) {
+      currentActiveEventId = eventId;
+      const quickSelect = document.getElementById('quickEventSwitcher');
+      if (quickSelect) quickSelect.value = eventId;
+      const curEv = eventsList.find(e => e.id === eventId);
+      const label = document.getElementById('currentActiveEventLabel');
+      if (label && curEv) label.innerText = curEv.name;
+
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderUnreturnedEquipmentTable();
+      renderUnitSettlementView();
+    }
+
+    function switchMainTab(tab) {
+      const vStaff = document.getElementById('viewStaff');
+      const vAdmin = document.getElementById('viewAdmin');
+      const vUnits = document.getElementById('viewUnits');
+      const vLogs = document.getElementById('viewLogs');
+
+      const btnStaff = document.getElementById('tabBtnStaff');
+      const btnAdmin = document.getElementById('tabBtnAdmin');
+      const btnUnits = document.getElementById('tabBtnUnits');
+      const btnLogs = document.getElementById('tabBtnLogs');
+
+      [btnStaff, btnAdmin, btnUnits, btnLogs].forEach(b => {
+        if (b) b.className = "px-3 sm:px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+      });
+
+      if (vStaff) vStaff.classList.add('hidden');
+      if (vAdmin) vAdmin.classList.add('hidden');
+      if (vUnits) vUnits.classList.add('hidden');
+      if (vLogs) vLogs.classList.add('hidden');
+
+      if (tab === 'staff') {
+        if (vStaff) vStaff.classList.remove('hidden');
+        if (btnStaff) btnStaff.className = "px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold";
+        refreshStaffView();
+      } else if (tab === 'admin') {
+        if (vAdmin) vAdmin.classList.remove('hidden');
+        if (btnAdmin) btnAdmin.className = "px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold";
+        renderAdminDashboardStats();
+        renderAdminTable();
+        renderUnreturnedEquipmentTable();
+      } else if (tab === 'units') {
+        if (vUnits) vUnits.classList.remove('hidden');
+        if (btnUnits) btnUnits.className = "px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold";
+        renderUnitSettlementView();
+      } else if (tab === 'logs') {
+        if (vLogs) vLogs.classList.remove('hidden');
+        if (btnLogs) btnLogs.className = "px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold";
+        renderLogsTable();
+      }
+    }
+
+    function refreshStaffView() {
+      filterFormItems();
+      renderQuickPickupCardList();
+      onItemSelectionChanged();
+    }
+
+    function onFormCategoryChanged() {
+      filterFormItems();
+    }
+
+    function filterFormItems() {
+      const cat = document.getElementById('formCategorySelect')?.value || 'all';
+      const select = document.getElementById('formItemSelect');
+      if (!select) return;
+
+      const curVal = select.value;
+      let items = DEFAULT_MASTER_ITEMS;
+      if (cat !== 'all') {
+        items = items.filter(i => i.category === cat);
+      }
+
+      select.innerHTML = items.map(i => {
+        const s = eventStockData[currentActiveEventId]?.[i.id] || { pickupQty: 0 };
+        return `<option value="${i.id}">[${i.isEquipment ? '器材' : '耗材'}] ${i.name} (現貨: ${s.pickupQty} ${i.unit})</option>`;
+      }).join('');
+
+      if (items.some(i => i.id === curVal)) {
+        select.value = curVal;
+      } else if (items.length > 0) {
+        select.value = items[0].id;
+      }
+      onItemSelectionChanged();
+    }
+
+    function setStaffActionType(type) {
+      currentStaffActionType = type;
+      const bCheckout = document.getElementById('typeBtnCheckout');
+      const bReturn = document.getElementById('typeBtnReturn');
+      const submitBtn = document.getElementById('formSubmitButton');
+      const submitText = document.getElementById('formSubmitText');
+      const qtyLabel = document.getElementById('formQtyLabel');
+
+      if (type === 'checkout') {
+        if (bCheckout) bCheckout.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-xs";
+        if (bReturn) bReturn.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+        if (submitBtn) submitBtn.className = "w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 px-4 rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-1.5";
+        if (submitText) submitText.innerText = "檢查並送出登記 (領出 / 借出)";
+        if (qtyLabel) qtyLabel.innerText = "登記數量 *";
+      } else {
+        if (bReturn) bReturn.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-amber-600 text-white shadow-xs";
+        if (bCheckout) bCheckout.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+        if (submitBtn) submitBtn.className = "w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-1.5";
+        if (submitText) submitText.innerText = "檢查並送出登記 (未使用退回 / 歸還)";
+        if (qtyLabel) qtyLabel.innerText = "歸還 / 退回數量 *";
+      }
+      onItemSelectionChanged();
+    }
+
+    function onItemSelectionChanged() {
+      const select = document.getElementById('formItemSelect');
+      if (!select) return;
+      const itemId = select.value;
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      if (!item) return;
+
+      const stock = eventStockData[currentActiveEventId]?.[item.id] || { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+
+      const unitSuffix = document.getElementById('formUnitSuffix');
+      const pickupStockCount = document.getElementById('currentPickupStockCount');
+      const borrowedCount = document.getElementById('currentBorrowedCount');
+      const statusRightLabel = document.getElementById('currentStatusRightLabel');
+
+      if (unitSuffix) unitSuffix.innerText = item.unit;
+      if (pickupStockCount) pickupStockCount.innerText = `${stock.pickupQty} ${item.unit}`;
+
+      if (item.isEquipment) {
+        if (statusRightLabel) statusRightLabel.innerText = "器材借出中";
+        if (borrowedCount) borrowedCount.innerText = `${stock.borrowedQty} ${item.unit}`;
+      } else {
+        if (statusRightLabel) statusRightLabel.innerText = "累計已消耗";
+        if (borrowedCount) borrowedCount.innerText = `${stock.consumedQty || 0} ${item.unit}`;
+      }
+
+      const tag = document.getElementById('formItemTypeTag');
+      const box = document.getElementById('stockHighlightBox');
+
+      if (tag) {
+        if (item.isEquipment) {
+          tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300";
+          tag.innerText = "🛠️ 器材 (需借還)";
+        } else {
+          tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200";
+          tag.innerText = "📦 耗材 (領出即消耗)";
+        }
+      }
+
+      if (box) {
+        if (stock.pickupQty <= 3) {
+          box.className = "p-3 rounded-xl bg-amber-50/90 border border-amber-300 flex items-center justify-between transition-all";
+        } else {
+          box.className = "p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between transition-all";
+        }
+      }
+    }
+
+    function renderQuickPickupCardList() {
+      const container = document.getElementById('quickPickupContainer');
+      if (!container) return;
+
+      const search = (document.getElementById('quickListSearch')?.value || '').trim().toLowerCase();
+      const catFilter = document.getElementById('quickListCategoryFilter')?.value || 'all';
+      const currentStocks = eventStockData[currentActiveEventId] || {};
+
+      let filtered = DEFAULT_MASTER_ITEMS;
+      if (catFilter !== 'all') filtered = filtered.filter(i => i.category === catFilter);
+      if (search) filtered = filtered.filter(item => item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">查無符合條件的物資品項</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const s = currentStocks[item.id] || { pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+        const isLow = s.pickupQty <= 3;
+
+        let statusText = item.isEquipment
+          ? `<span class="${s.borrowedQty > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}">外借未還：${s.borrowedQty} ${item.unit}</span>`
+          : `<span class="text-slate-500">累計消耗：${s.consumedQty || 0} ${item.unit}</span>`;
+
+        return `
+          <div class="p-3.5 rounded-xl border ${item.isEquipment ? 'border-amber-200 bg-amber-50/15' : (isLow ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 bg-white')} hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${item.isEquipment ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
+                  ${item.isEquipment ? '🛠️ 器材' : '📦 耗材'}
+                </span>
+                <span class="text-xs font-bold text-slate-900">${item.name}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
+                <span>分類：${item.category}</span>
+                <span>•</span>
+                ${statusText}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+              <div class="text-left sm:text-right pr-2">
+                <span class="text-[10px] text-slate-400 block font-medium">現場可用現存</span>
+                <span class="text-base font-black ${isLow ? 'text-amber-600' : 'text-teal-700'}">
+                  ${s.pickupQty} <span class="text-xs font-normal text-slate-500">${item.unit}</span>
+                </span>
+              </div>
+
+              <div class="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                <select id="quickType_${item.id}" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none">
+                  <option value="checkout">${item.isEquipment ? '借出' : '領出消耗'}</option>
+                  <option value="return">${item.isEquipment ? '歸還' : '未使用退回'}</option>
+                </select>
+
+                <div class="flex items-center">
+                  <button onclick="stepCardInput('${item.id}', -1)" type="button" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 font-bold text-xs flex items-center justify-center text-slate-700">-</button>
+                  <input type="number" id="quickInputQty_${item.id}" min="1" step="1" value="1" class="w-12 text-center bg-white border border-slate-200 mx-1 rounded py-0.5 text-xs font-black outline-none focus:ring-1 focus:ring-teal-500">
+                  <button onclick="stepCardInput('${item.id}', 1)" type="button" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 font-bold text-xs flex items-center justify-center text-slate-700">+</button>
+                </div>
+
+                <span class="text-[11px] text-slate-400 font-medium px-0.5">${item.unit}</span>
+
+                <button onclick="promptQuickConfirm('${item.id}')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition">
+                  送出
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function stepCardInput(itemId, delta) {
+      const input = document.getElementById(`quickInputQty_${itemId}`);
+      if (!input) return;
+      let val = parseInt(input.value, 10) || 1;
+      val = Math.max(1, val + delta);
+      input.value = val;
+    }
+
+    function promptQuickConfirm(itemId) {
+      let user = document.getElementById('quickStaffUser')?.value.trim();
+      let unit = document.getElementById('quickStaffStation')?.value.trim();
+      const type = document.getElementById(`quickType_${itemId}`)?.value || 'checkout';
+      const qtyInput = document.getElementById(`quickInputQty_${itemId}`);
+      const qty = parseInt(qtyInput?.value, 10);
+
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      const stock = eventStockData[currentActiveEventId]?.[itemId];
+      const ev = eventsList.find(e => e.id === currentActiveEventId);
+
+      if (!item || !stock || !ev) return;
+
+      if (!qty || qty <= 0) {
+        showToast('請輸入大於 0 的有效登記數量！', 'error');
+        return;
+      }
+
+      if (!user) user = "現場防護員";
+      if (!unit) unit = "大會機動防護組";
+
+      if (type === 'checkout' && stock.pickupQty < qty) {
+        showToast(`領用區現有存量僅剩 ${stock.pickupQty} ${item.unit}，不足領出 ${qty} ${item.unit}！`, 'error');
+        return;
+      }
+
+      pendingConfirmationAction = {
+        eventId: currentActiveEventId,
+        eventName: ev.name,
+        user: user,
+        unit: unit,
+        actionType: type,
+        itemId: item.id,
+        itemName: item.name,
+        isEquipment: item.isEquipment,
+        qty: qty,
+        unitName: item.unit,
+        note: type === 'checkout' ? (item.isEquipment ? '現場器材借用' : '防護現場消耗完畢') : (item.isEquipment ? '使用完畢歸還' : '未使用完整退回領用區')
+      };
+
+      document.getElementById('confirmEventName').innerText = ev.name;
+      document.getElementById('confirmUnitName').innerText = unit;
+      document.getElementById('confirmUserName').innerText = user;
+      document.getElementById('confirmItemName').innerText = `${item.name} (${item.isEquipment ? '器材' : '耗材'})`;
+
+      const typeBadge = document.getElementById('confirmActionTypeText');
+      if (type === 'checkout') {
+        typeBadge.className = "font-extrabold px-2 py-0.5 rounded text-white bg-teal-600";
+        typeBadge.innerText = item.isEquipment ? "🛠️ 器材借出" : "📦 耗材領出消耗";
+      } else {
+        typeBadge.className = "font-extrabold px-2 py-0.5 rounded text-white bg-amber-600";
+        typeBadge.innerText = item.isEquipment ? "🔄 器材歸還" : "↩️ 未使用退回領用區";
+      }
+
+      document.getElementById('confirmQuantityDisplay').innerText = `${qty} ${item.unit}`;
+      const beforePk = stock.pickupQty;
+      const afterPk = type === 'checkout' ? (beforePk - qty) : (beforePk + qty);
+      document.getElementById('confirmStockChangeSummary').innerText = `${beforePk} ➔ ${afterPk} ${item.unit}`;
+
+      document.getElementById('confirmNoteRow').classList.remove('hidden');
+      document.getElementById('confirmNoteText').innerText = pendingConfirmationAction.note;
+
+      document.getElementById('confirmActionModal').classList.remove('hidden');
+    }
+
+    function handleStaffActionSubmit(e) {
+      e.preventDefault();
+      const user = document.getElementById('formStaffUser').value.trim();
+      const unit = document.getElementById('formStaffUnit').value.trim() || '大會機動防護組';
+      const itemId = document.getElementById('formItemSelect').value;
+      const qty = parseInt(document.getElementById('formQtyInput').value, 10);
+      const note = document.getElementById('formNoteInput').value.trim();
+
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      const stock = eventStockData[currentActiveEventId]?.[itemId];
+      const ev = eventsList.find(e => e.id === currentActiveEventId);
+
+      if (!item || !stock || !qty || qty <= 0 || !ev) {
+        showToast('請輸入有效登記數量！', 'error');
+        return;
+      }
+
+      if (currentStaffActionType === 'checkout' && stock.pickupQty < qty) {
+        showToast(`領用區現貨僅剩 ${stock.pickupQty} ${item.unit}，不足領出 ${qty} ${item.unit}！`, 'error');
+        return;
+      }
+
+      pendingConfirmationAction = {
+        eventId: currentActiveEventId,
+        eventName: ev.name,
+        user: user,
+        unit: unit,
+        actionType: currentStaffActionType,
+        itemId: item.id,
+        itemName: item.name,
+        isEquipment: item.isEquipment,
+        qty: qty,
+        unitName: item.unit,
+        note: note || (currentStaffActionType === 'checkout' ? (item.isEquipment ? '現場器材借用' : '防護現場消耗') : (item.isEquipment ? '器材歸還' : '未使用退回'))
+      };
+
+      document.getElementById('confirmEventName').innerText = ev.name;
+      document.getElementById('confirmUnitName').innerText = unit;
+      document.getElementById('confirmUserName').innerText = user;
+      document.getElementById('confirmItemName').innerText = `${item.name} (${item.isEquipment ? '器材' : '耗材'})`;
+
+      const typeBadge = document.getElementById('confirmActionTypeText');
+      if (currentStaffActionType === 'checkout') {
+        typeBadge.className = "font-extrabold px-2 py-0.5 rounded text-white bg-teal-600";
+        typeBadge.innerText = item.isEquipment ? "🛠️ 器材借出" : "📦 耗材領出消耗";
+      } else {
+        typeBadge.className = "font-extrabold px-2 py-0.5 rounded text-white bg-amber-600";
+        typeBadge.innerText = item.isEquipment ? "🔄 器材歸還" : "↩️ 未使用退回領用區";
+      }
+
+      document.getElementById('confirmQuantityDisplay').innerText = `${qty} ${item.unit}`;
+      const beforePk = stock.pickupQty;
+      const afterPk = currentStaffActionType === 'checkout' ? (beforePk - qty) : (beforePk + qty);
+      document.getElementById('confirmStockChangeSummary').innerText = `${beforePk} ➔ ${afterPk} ${item.unit}`;
+
+      if (note) {
+        document.getElementById('confirmNoteRow').classList.remove('hidden');
+        document.getElementById('confirmNoteText').innerText = note;
+      } else {
+        document.getElementById('confirmNoteRow').classList.add('hidden');
+      }
+
+      document.getElementById('confirmActionModal').classList.remove('hidden');
+    }
+
+    function executeConfirmedStaffAction() {
+      if (!pendingConfirmationAction) return;
+      const act = pendingConfirmationAction;
+      const stock = eventStockData[act.eventId]?.[act.itemId];
+      if (!stock) return;
+
+      if (act.actionType === 'checkout') {
+        stock.pickupQty -= act.qty;
+        if (act.isEquipment) {
+          stock.borrowedQty += act.qty;
+        } else {
+          stock.consumedQty = (stock.consumedQty || 0) + act.qty;
+        }
+        showToast(`✅ [${act.unit}] ${act.user} 已成功領出 ${act.qty} ${act.unitName}「${act.itemName}」！`, 'success');
+      } else {
+        stock.pickupQty += act.qty;
+        if (act.isEquipment) {
+          stock.borrowedQty = Math.max(0, stock.borrowedQty - act.qty);
+        } else {
+          stock.consumedQty = Math.max(0, (stock.consumedQty || 0) - act.qty);
+        }
+        showToast(`🔄 [${act.unit}] ${act.user} 已成功退回/歸還 ${act.qty} ${act.unitName}「${act.itemName}」！`, 'success');
+      }
+
+      transactionLogs.unshift({
+        id: 'LOG_' + Date.now(),
+        time: new Date().toLocaleString('zh-TW', { hour12: false }),
+        eventId: act.eventId,
+        eventName: act.eventName,
+        unit: act.unit,
+        user: act.user,
+        actionType: act.actionType,
+        isEquipment: act.isEquipment,
+        itemId: act.itemId,
+        itemName: act.itemName,
+        qty: act.qty,
+        unitName: act.unitName,
+        note: act.note
+      });
+
+      saveDataToStorage();
+      closeModal('confirmActionModal');
+      pendingConfirmationAction = null;
+
+      const qtyInput = document.getElementById('formQtyInput');
+      const noteInput = document.getElementById('formNoteInput');
+      if (qtyInput) qtyInput.value = '';
+      if (noteInput) noteInput.value = '';
+
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderUnreturnedEquipmentTable();
+      renderUnitSettlementView();
+      renderLogsTable();
+    }
+
+    function renderAdminDashboardStats() {
+      let totalStock = 0;
+      let totalWarehouse = 0;
+      let totalPickup = 0;
+      let totalBorrowedOrConsumed = 0;
+
+      const selectedEventId = document.getElementById('adminEventFilter')?.value || 'ALL';
+
+      eventsList.forEach(ev => {
+        if (selectedEventId !== 'ALL' && ev.id !== selectedEventId) return;
+        const stocks = eventStockData[ev.id] || {};
+        DEFAULT_MASTER_ITEMS.forEach(it => {
+          const s = stocks[it.id] || { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+          totalStock += (s.warehouseQty + s.pickupQty);
+          totalWarehouse += s.warehouseQty;
+          totalPickup += s.pickupQty;
+          totalBorrowedOrConsumed += (it.isEquipment ? s.borrowedQty : (s.consumedQty || 0));
+        });
+      });
+
+      document.getElementById('statAllTotal').innerText = totalStock.toLocaleString();
+      document.getElementById('statWarehouseTotal').innerText = totalWarehouse.toLocaleString();
+      document.getElementById('statPickupTotal').innerText = totalPickup.toLocaleString();
+      document.getElementById('statBorrowedTotal').innerText = totalBorrowedOrConsumed.toLocaleString();
+    }
+
+    function renderAdminTable() {
+      const tbody = document.getElementById('adminStockTableBody');
+      if (!tbody) return;
+
+      const selectedScope = document.getElementById('adminEventFilter')?.value || 'ALL';
+      let items = DEFAULT_MASTER_ITEMS;
+
+      if (currentAdminCategory !== 'all') {
+        items = items.filter(i => i.category === currentAdminCategory);
+      }
+
+      tbody.innerHTML = items.map(item => {
+        let wh = 0;
+        let pk = 0;
+        let ext = 0;
+
+        if (selectedScope === 'ALL') {
+          eventsList.forEach(ev => {
+            const s = eventStockData[ev.id]?.[item.id] || { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+            wh += s.warehouseQty;
+            pk += s.pickupQty;
+            ext += item.isEquipment ? s.borrowedQty : (s.consumedQty || 0);
+          });
+        } else {
+          const s = eventStockData[selectedScope]?.[item.id] || { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+          wh = s.warehouseQty;
+          pk = s.pickupQty;
+          ext = item.isEquipment ? s.borrowedQty : (s.consumedQty || 0);
+        }
+
+        const total = wh + pk;
+        const isLow = pk <= 3;
+
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3 px-3">
+              <div class="font-bold text-slate-900">${item.name}</div>
+              <div class="text-[10px] text-slate-400">ID: ${item.id}</div>
+            </td>
+            <td class="py-3 px-3">
+              <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.isEquipment ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
+                ${item.isEquipment ? '🛠️ 器材' : '📦 耗材'}
+              </span>
+              <span class="text-[11px] text-slate-500 ml-1">${item.category}</span>
+            </td>
+            <td class="py-3 px-3 text-right font-bold text-indigo-700">${wh} ${item.unit}</td>
+            <td class="py-3 px-3 text-right font-black ${isLow ? 'text-amber-600' : 'text-teal-700'}">${pk} ${item.unit}</td>
+            <td class="py-3 px-3 text-right font-semibold text-slate-600">${ext} ${item.unit}</td>
+            <td class="py-3 px-3 text-right font-black text-slate-900 bg-slate-50/50">${total} ${item.unit}</td>
+            <td class="py-3 px-3 text-center">
+              ${isLow
+                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 animate-pulse">⚠️ 偏低</span>'
+                : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">充足</span>'
+              }
+            </td>
+            <td class="py-3 px-3 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="openStockTransferModal('${item.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200 transition">
+                  調度
+                </button>
+                <button onclick="openAdjustStockModal('${item.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition">
+                  校正
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function setAdminCategoryFilter(cat) {
+      currentAdminCategory = cat;
+      const btnMap = {
+        'all': 'catFilterAll',
+        '耗材貼布類': 'catFilterTape',
+        '耗材外傷類': 'catFilterWound',
+        '耗材其他類': 'catFilterOtherConsumable',
+        '非耗材類': 'catFilterOther',
+        '非耗材其他類': 'catFilterOtherEquip'
+      };
+      Object.keys(btnMap).forEach(key => {
+        const btn = document.getElementById(btnMap[key]);
+        if (btn) {
+          btn.className = key === cat
+            ? "px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 text-white transition"
+            : "px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+        }
+      });
+      renderAdminTable();
+    }
+
+    function renderUnreturnedEquipmentTable() {
+      const tbody = document.getElementById('unreturnedTableBody');
+      const badge = document.getElementById('unreturnedBadgeCount');
+      if (!tbody) return;
+
+      const unreturnedLogs = transactionLogs.filter(l => l.actionType === 'checkout' && l.isEquipment && !l.isReturned);
+      if (badge) badge.innerText = `${unreturnedLogs.length} 筆未還`;
+
+      if (unreturnedLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-emerald-600 text-xs font-bold bg-emerald-50/40">🎉 目前無任何非耗材器材外借，皆已完整歸還領用區！</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = unreturnedLogs.map(log => `
+        <tr class="hover:bg-amber-50/40 transition">
+          <td class="py-2.5 px-3 font-mono text-slate-400 text-[11px]">${log.time}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${log.eventName}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-900">${log.unit || '機動組'} / ${log.user}</td>
+          <td class="py-2.5 px-3 font-bold text-teal-800">${log.itemName}</td>
+          <td class="py-2.5 px-3 text-right font-black text-amber-700">${log.qty} ${log.unitName || log.unit || '件'}</td>
+          <td class="py-2.5 px-3 text-slate-500">${log.note || '-'}</td>
+          <td class="py-2.5 px-3 text-center">
+            <button onclick="adminMarkReturned('${log.id}')" class="px-2 py-1 bg-white border border-amber-300 hover:bg-amber-600 hover:text-white text-amber-800 rounded-lg text-xs font-bold transition">
+              確認交還
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function adminMarkReturned(logId) {
+      const log = transactionLogs.find(l => l.id === logId);
+      if (!log || log.isReturned) return;
+
+      log.isReturned = true;
+      const stock = eventStockData[log.eventId]?.[log.itemId];
+      if (stock) {
+        stock.pickupQty += log.qty;
+        stock.borrowedQty = Math.max(0, stock.borrowedQty - log.qty);
+      }
+
+      transactionLogs.unshift({
+        id: 'LOG_' + Date.now(),
+        time: new Date().toLocaleString('zh-TW', { hour12: false }),
+        eventId: log.eventId,
+        eventName: log.eventName,
+        unit: log.unit || '機動組',
+        user: log.user,
+        actionType: 'return',
+        isEquipment: true,
+        itemId: log.itemId,
+        itemName: log.itemName,
+        qty: log.qty,
+        unitName: log.unitName || log.unit || '件',
+        note: '後台確認器材收回完成'
+      });
+
+      saveDataToStorage();
+      showToast(`已確認收回 ${log.user} 借用之「${log.itemName}」！`, 'success');
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderUnreturnedEquipmentTable();
+      refreshStaffView();
+      renderLogsTable();
+      renderUnitSettlementView();
+    }
+
+    function renderUnitSettlementView() {
+      const container = document.getElementById('unitSettlementContainer');
+      if (!container) return;
+
+      const selectedScope = document.getElementById('unitEventFilter')?.value || 'ALL';
+      const search = (document.getElementById('unitSearchInput')?.value || '').trim().toLowerCase();
+
+      const unitMap = {};
+
+      transactionLogs.forEach(log => {
+        if (log.actionType !== 'checkout' && log.actionType !== 'return') return;
+        if (selectedScope !== 'ALL' && log.eventId !== selectedScope) return;
+
+        const unitName = log.unit || '未指定組別';
+        const key = `${log.eventId}___${unitName}`;
+
+        if (!unitMap[key]) {
+          unitMap[key] = {
+            key: key,
+            unit: unitName,
+            eventId: log.eventId,
+            eventName: log.eventName,
+            users: new Set(),
+            items: {},
+            lastActive: log.time
+          };
+        }
+
+        if (log.user) unitMap[key].users.add(log.user);
+
+        if (!unitMap[key].items[log.itemId]) {
+          unitMap[key].items[log.itemId] = {
+            itemId: log.itemId,
+            itemName: log.itemName,
+            isEquipment: log.isEquipment,
+            unitName: log.unitName || '件',
+            checkoutQty: 0,
+            returnQty: 0
+          };
+        }
+
+        if (log.actionType === 'checkout') {
+          unitMap[key].items[log.itemId].checkoutQty += log.qty;
+        } else if (log.actionType === 'return') {
+          unitMap[key].items[log.itemId].returnQty += log.qty;
+        }
+      });
+
+      const unitsList = Object.values(unitMap);
+      let totalUnitsCount = unitsList.length;
+      let pendingUnitsCount = 0;
+      let totalUnreturnedEquipQty = 0;
+      let totalConsumableCheckout = 0;
+      let totalConsumableReturn = 0;
+
+      unitsList.forEach(u => {
+        let hasPendingEquip = false;
+        Object.values(u.items).forEach(item => {
+          if (item.isEquipment) {
+            const unreturned = Math.max(0, item.checkoutQty - item.returnQty);
+            if (unreturned > 0) {
+              hasPendingEquip = true;
+              totalUnreturnedEquipQty += unreturned;
+            }
+          } else {
+            totalConsumableCheckout += item.checkoutQty;
+            totalConsumableReturn += item.returnQty;
+          }
+        });
+        if (hasPendingEquip) pendingUnitsCount++;
+      });
+
+      const returnRate = totalConsumableCheckout > 0 
+        ? Math.round((totalConsumableReturn / totalConsumableCheckout) * 100)
+        : 0;
+
+      const statTotal = document.getElementById('unitStatTotalUnits');
+      const statPending = document.getElementById('unitStatPendingUnits');
+      const statUnreturned = document.getElementById('unitStatUnreturnedEquipQty');
+      const statReturnRate = document.getElementById('unitStatConsumableReturnRate');
+
+      if (statTotal) statTotal.innerText = `${totalUnitsCount} 組`;
+      if (statPending) statPending.innerText = `${pendingUnitsCount} 組`;
+      if (statUnreturned) statUnreturned.innerText = `${totalUnreturnedEquipQty} 件`;
+      if (statReturnRate) statReturnRate.innerText = `${returnRate}%`;
+
+      let filteredUnits = unitsList;
+      if (search) {
+        filteredUnits = filteredUnits.filter(u => 
+          u.unit.toLowerCase().includes(search) ||
+          Array.from(u.users).some(user => user.toLowerCase().includes(search)) ||
+          u.eventName.toLowerCase().includes(search)
+        );
+      }
+
+      if (filteredUnits.length === 0) {
+        container.innerHTML = `
+          <div class="p-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <span class="text-3xl block mb-2">🔍</span>
+            <div class="text-sm font-bold text-slate-600">查無任何符合條件的單位領借紀錄</div>
+            <div class="text-xs text-slate-400 mt-1">請確認活動篩選或搜尋字詞</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredUnits.map(u => {
+        const usersArr = Array.from(u.users);
+        const itemsArr = Object.values(u.items);
+
+        let unreturnedCountInUnit = 0;
+        let unitTotalConsumed = 0;
+        let unitTotalReturned = 0;
+
+        const rowsHtml = itemsArr.map(it => {
+          const isEquip = it.isEquipment;
+          const checkout = it.checkoutQty;
+          const returned = it.returnQty;
+          
+          let statusBadge = '';
+          let calcDetail = '';
+
+          if (isEquip) {
+            const owing = Math.max(0, checkout - returned);
+            if (owing > 0) {
+              unreturnedCountInUnit += owing;
+              statusBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-100 text-rose-800 animate-pulse">⚠️ 尚欠未還 ${owing} ${it.unitName}</span>`;
+            } else {
+              statusBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">✅ 全數歸還完畢</span>`;
+            }
+            calcDetail = `借出: ${checkout} / 已還: ${returned}`;
+          } else {
+            const consumed = Math.max(0, checkout - returned);
+            unitTotalConsumed += consumed;
+            unitTotalReturned += returned;
+            statusBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">實質耗用: ${consumed} ${it.unitName}</span>`;
+            calcDetail = `領取: ${checkout} / 剩餘退回: ${returned}`;
+          }
+
+          return `
+            <tr class="hover:bg-slate-50/70 transition border-b border-slate-100">
+              <td class="py-2.5 px-3">
+                <span class="text-xs font-bold text-slate-900">${it.itemName}</span>
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isEquip ? 'bg-amber-100 text-amber-800' : 'bg-teal-50 text-teal-800 border border-teal-200'}">
+                  ${isEquip ? '🛠️ 器材' : '📦 耗材'}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-right font-black text-slate-800">${checkout} ${it.unitName}</td>
+              <td class="py-2.5 px-3 text-right font-bold text-emerald-600">${returned} ${it.unitName}</td>
+              <td class="py-2.5 px-3 text-right font-medium text-slate-500">${calcDetail}</td>
+              <td class="py-2.5 px-3 text-center">${statusBadge}</td>
+            </tr>
+          `;
+        }).join('');
+
+        const isFullyCleared = unreturnedCountInUnit === 0;
+
+        return `
+          <div class="rounded-2xl border ${isFullyCleared ? 'border-slate-200 bg-white' : 'border-amber-300 bg-amber-50/15'} p-5 shadow-xs transition hover:shadow-md space-y-3.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl ${isFullyCleared ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800'} flex items-center justify-center font-black text-lg">
+                  ${isFullyCleared ? '🏢' : '⚠️'}
+                </span>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-base font-black text-slate-900">${u.unit}</h4>
+                    <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">${u.eventName}</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">
+                    經手人員：<strong class="text-slate-700">${usersArr.join(', ') || '現場人員'}</strong> • 最後紀錄：${u.lastActive}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                ${isFullyCleared 
+                  ? `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black">結算完畢 • 無欠設備</span>`
+                  : `<span class="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black animate-pulse">有 ${unreturnedCountInUnit} 件器材未還</span>`
+                }
+                <button onclick="openUnitReturnModal('${u.key}')" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1">
+                  <span>🔄 批次歸還/剩餘退回結算</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-100">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-100">
+                    <th class="py-2 px-3">物資品項</th>
+                    <th class="py-2 px-3 text-center">性質</th>
+                    <th class="py-2 px-3 text-right">當初借出/領取總量</th>
+                    <th class="py-2 px-3 text-right text-emerald-700">已退回/歸還數量</th>
+                    <th class="py-2 px-3 text-right">借還流轉明細</th>
+                    <th class="py-2 px-3 text-center">結算狀態 / 實質消耗</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="p-2.5 bg-slate-50 rounded-xl flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
+              <div class="flex items-center gap-4">
+                <span>📦 耗材總領出：<strong>${itemsArr.filter(i => !i.isEquipment).reduce((s, i) => s + i.checkoutQty, 0)}</strong></span>
+                <span>🔥 實質消耗：<strong class="text-slate-800">${unitTotalConsumed}</strong></span>
+                <span>↩️ 剩餘退回領用區：<strong class="text-emerald-700">${unitTotalReturned}</strong></span>
+              </div>
+              <div class="text-slate-400 italic">💡 器材點交歸還後，領用區存量將自動補齊；未用完耗材退回將自動減少消耗統計。</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    let activeSettlingUnitKey = null;
+
+    function openUnitReturnModal(unitKey) {
+      activeSettlingUnitKey = unitKey;
+      const [eventId, unitName] = unitKey.split('___');
+      const ev = eventsList.find(e => e.id === eventId);
+
+      document.getElementById('returnModalUnit').innerText = unitName;
+      document.getElementById('returnModalEvent').innerText = ev ? ev.name : '全部活動';
+      document.getElementById('unitReturnHandler').value = document.getElementById('quickStaffUser')?.value || '現場防護點收員';
+
+      const unitItems = {};
+      transactionLogs.forEach(l => {
+        if (l.eventId === eventId && (l.unit || '未指定組別') === unitName) {
+          if (!unitItems[l.itemId]) {
+            unitItems[l.itemId] = {
+              itemId: l.itemId,
+              itemName: l.itemName,
+              isEquipment: l.isEquipment,
+              unitName: l.unitName || '件',
+              checkoutQty: 0,
+              returnQty: 0
+            };
+          }
+          if (l.actionType === 'checkout') unitItems[l.itemId].checkoutQty += l.qty;
+          if (l.actionType === 'return') unitItems[l.itemId].returnQty += l.qty;
+        }
+      });
+
+      const container = document.getElementById('unitReturnItemsList');
+      const itemsList = Object.values(unitItems);
+
+      if (itemsList.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-slate-400">該單位目前無任何領借紀錄</div>`;
+      } else {
+        container.innerHTML = itemsList.map(it => {
+          const isEquip = it.isEquipment;
+          const owing = Math.max(0, it.checkoutQty - it.returnQty);
+
+          return `
+            <div class="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${isEquip ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
+                    ${isEquip ? '器材' : '耗材'}
+                  </span>
+                  <span class="font-bold text-slate-900">${it.itemName}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  原借出: ${it.checkoutQty} • 已還/退: ${it.returnQty} • <strong class="${isEquip ? (owing > 0 ? 'text-rose-600' : 'text-emerald-600') : 'text-slate-600'}">目前手上剩餘/借用中: ${owing} ${it.unitName}</strong>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-xs text-slate-500 font-medium">本次繳回:</span>
+                <input type="number" id="unitReturnInput_${it.itemId}" min="0" max="${owing > 0 ? owing : 999}" value="${owing > 0 ? owing : 0}" class="w-16 bg-slate-50 border border-slate-300 rounded-lg py-1 px-2 text-center text-xs font-black outline-none focus:ring-1 focus:ring-teal-500">
+                <span class="text-xs text-slate-400">${it.unitName}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('unitReturnModal').classList.remove('hidden');
+    }
+
+    function handleUnitReturnSubmit(e) {
+      e.preventDefault();
+      if (!activeSettlingUnitKey) return;
+
+      const [eventId, unitName] = activeSettlingUnitKey.split('___');
+      const ev = eventsList.find(e => e.id === eventId);
+      const handler = document.getElementById('unitReturnHandler').value.trim() || '點收人員';
+      const note = document.getElementById('unitReturnNote').value.trim() || '單位賽後結算歸還';
+
+      let returnCount = 0;
+
+      DEFAULT_MASTER_ITEMS.forEach(it => {
+        const input = document.getElementById(`unitReturnInput_${it.id}`);
+        if (input) {
+          const qty = parseInt(input.value, 10);
+          if (qty && qty > 0) {
+            returnCount++;
+            const stock = eventStockData[eventId]?.[it.id];
+            if (stock) {
+              stock.pickupQty += qty;
+              if (it.isEquipment) {
+                stock.borrowedQty = Math.max(0, stock.borrowedQty - qty);
+              } else {
+                stock.consumedQty = Math.max(0, (stock.consumedQty || 0) - qty);
+              }
+            }
+
+            transactionLogs.unshift({
+              id: 'LOG_' + Date.now() + '_' + it.id,
+              time: new Date().toLocaleString('zh-TW', { hour12: false }),
+              eventId: eventId,
+              eventName: ev ? ev.name : '活動專案',
+              unit: unitName,
+              user: `${handler} (點收歸還)`,
+              actionType: 'return',
+              isEquipment: it.isEquipment,
+              itemId: it.id,
+              itemName: it.name,
+              qty: qty,
+              unitName: it.unit,
+              note: `[單位結算] ${note}`
+            });
+          }
+        }
+      });
+
+      if (returnCount === 0) {
+        showToast('未填寫任何歸還數量！', 'error');
+        return;
+      }
+
+      saveDataToStorage();
+      closeModal('unitReturnModal');
+      showToast(`已成功為「${unitName}」完成批次歸還與剩餘物資結算！`, 'success');
+
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderUnreturnedEquipmentTable();
+      renderUnitSettlementView();
+      renderLogsTable();
+    }
+
+    function exportUnitReportCSV() {
+      let csv = "\uFEFF活動名稱,借領單位,物資品項,性質,借出總量,歸還剩餘量,實質消耗,器材欠繳未還,單位經手人員\n";
+      const unitMap = {};
+
+      transactionLogs.forEach(l => {
+        if (l.actionType !== 'checkout' && l.actionType !== 'return') return;
+        const key = `${l.eventId}___${l.unit || '未指定組別'}`;
+        if (!unitMap[key]) {
+          unitMap[key] = {
+            eventName: l.eventName,
+            unit: l.unit || '未指定組別',
+            users: new Set(),
+            items: {}
+          };
+        }
+        if (l.user) unitMap[key].users.add(l.user);
+        if (!unitMap[key].items[l.itemId]) {
+          unitMap[key].items[l.itemId] = {
+            itemName: l.itemName,
+            isEquipment: l.isEquipment,
+            unitName: l.unitName || '件',
+            checkout: 0,
+            returned: 0
+          };
+        }
+        if (l.actionType === 'checkout') unitMap[key].items[l.itemId].checkout += l.qty;
+        if (l.actionType === 'return') unitMap[key].items[l.itemId].returned += l.qty;
+      });
+
+      Object.values(unitMap).forEach(u => {
+        const usersStr = Array.from(u.users).join('、');
+        Object.values(u.items).forEach(it => {
+          const nature = it.isEquipment ? '非耗材器材' : '防護耗材';
+          const consumed = it.isEquipment ? 0 : Math.max(0, it.checkout - it.returned);
+          const owing = it.isEquipment ? Math.max(0, it.checkout - it.returned) : 0;
+          csv += `"${u.eventName}","${u.unit}","${it.itemName}","${nature}","${it.checkout} ${it.unitName}","${it.returned} ${it.unitName}","${consumed} ${it.unitName}","${owing} ${it.unitName}","${usersStr}"\n`;
+        });
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `各單位領借對帳結算表_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("已成功匯出單位對帳結算表！", "success");
+    }
+
+    function openStockTransferModal(itemId = null) {
+      const select = document.getElementById('transferItemSelect');
+      select.innerHTML = DEFAULT_MASTER_ITEMS.map(i => `<option value="${i.id}" ${i.id === itemId ? 'selected' : ''}>${i.name} (${i.unit})</option>`).join('');
+      const evSelect = document.getElementById('transferEventSelect');
+      if (evSelect) evSelect.value = currentActiveEventId;
+      updateTransferModalLimits();
+      document.getElementById('transferModal').classList.remove('hidden');
+    }
+
+    function updateTransferModalLimits() {
+      const eventId = document.getElementById('transferEventSelect').value;
+      const dir = document.getElementById('transferDirection').value;
+      const itemId = document.getElementById('transferItemSelect').value;
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      const stock = eventStockData[eventId]?.[itemId] || { warehouseQty: 0, pickupQty: 0 };
+      const notice = document.getElementById('transferAvailableNotice');
+
+      if (!item) return;
+      if (dir === 'inbound_warehouse') {
+        notice.innerText = `目前後台庫存倉現有 ${stock.warehouseQty} ${item.unit}（進貨將累加）`;
+      } else if (dir === 'to_pickup') {
+        notice.innerText = `後台庫存倉現有 ${stock.warehouseQty} ${item.unit}`;
+      } else {
+        notice.innerText = `現場領用區現有 ${stock.pickupQty} ${item.unit}`;
+      }
+    }
+
+    function handleTransferSubmit(e) {
+      e.preventDefault();
+      const eventId = document.getElementById('transferEventSelect').value;
+      const dir = document.getElementById('transferDirection').value;
+      const itemId = document.getElementById('transferItemSelect').value;
+      const qty = parseInt(document.getElementById('transferQtyInput').value, 10);
+
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      const stock = eventStockData[eventId]?.[itemId];
+      const ev = eventsList.find(e => e.id === eventId);
+
+      if (!item || !stock || !qty || qty <= 0 || !ev) return;
+
+      if (dir === 'inbound_warehouse') {
+        stock.warehouseQty += qty;
+        transactionLogs.unshift({
+          id: 'LOG_' + Date.now(),
+          time: new Date().toLocaleString('zh-TW', { hour12: false }),
+          eventId: eventId,
+          eventName: ev.name,
+          unit: '總務庫存倉',
+          user: '管理員 (採購進貨)',
+          actionType: 'inbound',
+          isEquipment: item.isEquipment,
+          itemId: item.id,
+          itemName: item.name,
+          qty: qty,
+          unitName: item.unit,
+          note: '採購進貨入後台庫存倉'
+        });
+        showToast(`已成功進貨 ${qty} ${item.unit}「${item.name}」入大倉！`, 'success');
+      } else if (dir === 'to_pickup') {
+        if (stock.warehouseQty < qty) {
+          showToast(`大倉存量不足！現有僅 ${stock.warehouseQty} ${item.unit}`, 'error');
+          return;
+        }
+        stock.warehouseQty -= qty;
+        stock.pickupQty += qty;
+        showToast(`已從大倉撥發 ${qty} ${item.unit}「${item.name}」至現場領用區！`, 'success');
+      } else {
+        if (stock.pickupQty < qty) {
+          showToast(`現場領用區存量不足！現有僅 ${stock.pickupQty} ${item.unit}`, 'error');
+          return;
+        }
+        stock.pickupQty -= qty;
+        stock.warehouseQty += qty;
+        showToast(`已將 ${qty} ${item.unit}「${item.name}」收回至大倉保管！`, 'success');
+      }
+
+      saveDataToStorage();
+      closeModal('transferModal');
+      document.getElementById('transferQtyInput').value = '';
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderLogsTable();
+    }
+
+    function openAdjustStockModal(itemId) {
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      if (!item) return;
+
+      const filterVal = document.getElementById('adminEventFilter')?.value || 'ALL';
+      const targetEventId = filterVal === 'ALL' ? currentActiveEventId : filterVal;
+
+      const evSelect = document.getElementById('adjustEventSelect');
+      evSelect.innerHTML = eventsList.map(e => `<option value="${e.id}" ${e.id === targetEventId ? 'selected' : ''}>${e.name}</option>`).join('');
+
+      document.getElementById('adjustModalItemName').innerText = `${item.name} (${item.unit})`;
+      document.getElementById('adjustItemId').value = itemId;
+      document.getElementById('adjustNoteInput').value = "先前輸入錯誤，調整更正";
+
+      loadAdjustValuesForEvent(evSelect.value, itemId);
+      document.getElementById('adjustStockModal').classList.remove('hidden');
+    }
+
+    function onAdjustEventChanged() {
+      const eventId = document.getElementById('adjustEventSelect').value;
+      const itemId = document.getElementById('adjustItemId').value;
+      loadAdjustValuesForEvent(eventId, itemId);
+    }
+
+    function loadAdjustValuesForEvent(eventId, itemId) {
+      const stock = eventStockData[eventId]?.[itemId] || { warehouseQty: 0, pickupQty: 0 };
+      document.getElementById('adjustWarehouseQty').value = stock.warehouseQty;
+      document.getElementById('adjustPickupQty').value = stock.pickupQty;
+    }
+
+    function applyAdjustReason(val) {
+      if (val !== '其他自訂說明') {
+        document.getElementById('adjustNoteInput').value = val;
+      } else {
+        document.getElementById('adjustNoteInput').value = '';
+        document.getElementById('adjustNoteInput').focus();
+      }
+    }
+
+    function handleAdjustStockSubmit(e) {
+      e.preventDefault();
+      const eventId = document.getElementById('adjustEventSelect').value;
+      const itemId = document.getElementById('adjustItemId').value;
+      const newWh = parseInt(document.getElementById('adjustWarehouseQty').value, 10);
+      const newPk = parseInt(document.getElementById('adjustPickupQty').value, 10);
+      const note = document.getElementById('adjustNoteInput').value.trim();
+
+      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
+      const ev = eventsList.find(e => e.id === eventId);
+
+      if (!item || isNaN(newWh) || isNaN(newPk) || newWh < 0 || newPk < 0 || !ev) {
+        showToast('請輸入有效的庫存數量！', 'error');
+        return;
+      }
+
+      if (!eventStockData[eventId]) eventStockData[eventId] = {};
+      if (!eventStockData[eventId][itemId]) {
+        eventStockData[eventId][itemId] = { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
+      }
+
+      const stock = eventStockData[eventId][itemId];
+      const prevWh = stock.warehouseQty;
+      const prevPk = stock.pickupQty;
+
+      stock.warehouseQty = newWh;
+      stock.pickupQty = newPk;
+
+      transactionLogs.unshift({
+        id: 'LOG_' + Date.now(),
+        time: new Date().toLocaleString('zh-TW', { hour12: false }),
+        eventId: eventId,
+        eventName: ev.name,
+        unit: '管理後台校正',
+        user: '系統管理員',
+        actionType: 'adjust',
+        isEquipment: item.isEquipment,
+        itemId: item.id,
+        itemName: item.name,
+        qty: Math.abs(newWh - prevWh) + Math.abs(newPk - prevPk),
+        unitName: item.unit,
+        note: `[盤點校正] 庫存倉:${prevWh}➔${newWh}, 領用區:${prevPk}➔${newPk}。原因: ${note}`
+      });
+
+      saveDataToStorage();
+      closeModal('adjustStockModal');
+      showToast(`已成功將「${ev.name}」的「${item.name}」大倉更新為 ${newWh} ${item.unit}！`, 'success');
+
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+      renderLogsTable();
+      renderUnitSettlementView();
+    }
+
+    function openCustomEventModal() {
+      document.getElementById('customEventModal').classList.remove('hidden');
+    }
+
+    function handleCreateCustomEvent(e) {
+      e.preventDefault();
+      const name = document.getElementById('customEventName').value.trim();
+      const note = document.getElementById('customEventNote').value.trim();
+
+      if (!name) return;
+
+      const newId = 'EV_' + Date.now();
+      const newEv = { id: newId, name: name, note: note };
+      eventsList.push(newEv);
+
+      eventStockData[newId] = {};
+      DEFAULT_MASTER_ITEMS.forEach(item => {
+        eventStockData[newId][item.id] = {
+          warehouseQty: Math.round(item.defaultWh * 0.7),
+          pickupQty: Math.round(item.defaultPk * 0.7),
+          borrowedQty: 0,
+          consumedQty: 0
+        };
+      });
+
+      saveDataToStorage();
+      renderEventDropdowns();
+      changeCurrentEvent(newId);
+      closeModal('customEventModal');
+      showToast(`已成功建立「${name}」活動專案！`, 'success');
+
+      document.getElementById('customEventName').value = '';
+      document.getElementById('customEventNote').value = '';
+    }
+
+    function handleAddNewItem(e) {
+      e.preventDefault();
+      const isEquip = document.querySelector('input[name="newItemIsEquip"]:checked').value === "1";
+      const name = document.getElementById('newItemName').value.trim();
+      const category = document.getElementById('newItemCategory').value;
+      const unit = document.getElementById('newItemUnit').value.trim();
+      const defaultWh = parseInt(document.getElementById('newItemDefaultWh').value, 10) || 0;
+      const defaultPk = parseInt(document.getElementById('newItemDefaultPk').value, 10) || 0;
+
+      if (!name || !unit) return;
+
+      const newId = (isEquip ? 'E_CUS_' : 'T_CUS_') + Date.now().toString().slice(-4);
+      const newItem = {
+        id: newId,
+        name: name,
+        category: category,
+        isEquipment: isEquip,
+        unit: unit,
+        defaultWh: defaultWh,
+        defaultPk: defaultPk
+      };
+
+      DEFAULT_MASTER_ITEMS.push(newItem);
+
+      eventsList.forEach(ev => {
+        if (!eventStockData[ev.id]) eventStockData[ev.id] = {};
+        eventStockData[ev.id][newId] = {
+          warehouseQty: defaultWh,
+          pickupQty: defaultPk,
+          borrowedQty: 0,
+          consumedQty: 0
+        };
+      });
+
+      saveDataToStorage();
+      closeModal('addItemModal');
+      showToast(`已成功加入新品項「${name}」！`, 'success');
+
+      document.getElementById('newItemName').value = '';
+      document.getElementById('newItemUnit').value = '';
+
+      refreshStaffView();
+      renderAdminDashboardStats();
+      renderAdminTable();
+    }
+
+    function renderLogsTable() {
+      const tbody = document.getElementById('logsTableBody');
+      if (!tbody) return;
+
+      const search = (document.getElementById('logSearchInput')?.value || '').trim().toLowerCase();
+
+      const filtered = transactionLogs.filter(log => {
+        if (!search) return true;
+        return (log.user && log.user.toLowerCase().includes(search)) ||
+               (log.unit && log.unit.toLowerCase().includes(search)) ||
+               log.itemName.toLowerCase().includes(search) ||
+               log.eventName.toLowerCase().includes(search) ||
+               (log.note && log.note.toLowerCase().includes(search));
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400 text-xs">查無符合條件的異動紀錄</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(log => {
+        const isOut = log.actionType === 'checkout';
+        const isInbound = log.actionType === 'inbound';
+        const isAdjust = log.actionType === 'adjust';
+        
+        let typeBadge = '';
+        let qtyClass = 'text-amber-700';
+        let qtyPrefix = '+';
+
+        if (isOut) {
+          typeBadge = log.isEquipment 
+            ? '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">🛠️ 器材借出</span>'
+            : '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-100 text-teal-800">📦 領出消耗</span>';
+          qtyClass = 'text-teal-700';
+          qtyPrefix = '-';
+        } else if (isInbound) {
+          typeBadge = '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800">📥 進貨入庫</span>';
+          qtyClass = 'text-indigo-700';
+          qtyPrefix = '+';
+        } else if (isAdjust) {
+          typeBadge = '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-800">✏️ 盤點校正</span>';
+          qtyClass = 'text-slate-700';
+          qtyPrefix = '±';
+        } else {
+          typeBadge = log.isEquipment
+            ? '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">🔄 器材歸還</span>'
+            : '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">↩️ 未用退回</span>';
+          qtyClass = 'text-amber-700';
+          qtyPrefix = '+';
+        }
+
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3 px-3 font-mono text-slate-400 text-[11px]">${log.time}</td>
+            <td class="py-3 px-3 font-bold text-slate-800">${log.eventName}</td>
+            <td class="py-3 px-3">
+              <span class="font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px] block sm:inline">${log.unit || '機動組'}</span>
+              <span class="text-slate-700 font-medium ml-1">${log.user}</span>
+            </td>
+            <td class="py-3 px-3 text-center">
+              ${typeBadge}
+            </td>
+            <td class="py-3 px-3">
+              <span class="font-bold text-slate-900">${log.itemName}</span>
+              <span class="text-[10px] ml-1 px-1 rounded ${log.isEquipment ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}">
+                ${log.isEquipment ? '器材' : '耗材'}
+              </span>
+            </td>
+            <td class="py-3 px-3 text-right font-black ${qtyClass}">
+              ${qtyPrefix}${log.qty} ${log.unitName || log.unit || '件'}
+            </td>
+            <td class="py-3 px-3 text-slate-500">${log.note || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportLogsCSV() {
+      let csv = "\uFEFF登記時間,活動專案,借領單位,登記人員,異動類型,品項性質,品項名稱,數量,單位,用途備註\n";
+      transactionLogs.forEach(l => {
+        let typeStr = '未使用退回/歸還';
+        if (l.actionType === 'checkout') typeStr = l.isEquipment ? '器材借出' : '耗材領出消耗';
+        else if (l.actionType === 'inbound') typeStr = '進貨入庫';
+        else if (l.actionType === 'adjust') typeStr = '數量校正';
+
+        const natureStr = l.isEquipment ? '非耗材器材' : '防護耗材';
+        csv += `"${l.time}","${l.eventName}","${l.unit || '未指定組別'}","${l.user}","${typeStr}","${natureStr}","${l.itemName}","${l.qty}","${l.unitName || l.unit || '件'}","${l.note || ''}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `防護物資領還紀錄_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("已成功匯出 CSV 檔案！", "success");
+    }
+
+    const SYNC_CHANNEL_NAME = "SPORTS_MED_INVENTORY_SYNC_CHANNEL";
+    let syncChannel = null;
+
+    try {
+      syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+      syncChannel.onmessage = (event) => {
+        if (event.data && event.data.type === 'DATA_UPDATED') {
+          loadDataFromStorage();
+          refreshStaffView();
+          renderAdminDashboardStats();
+          renderAdminTable();
+          renderUnreturnedEquipmentTable();
+          renderUnitSettlementView();
+          renderLogsTable();
+        }
+      };
+    } catch (err) {
+      console.warn("BroadcastChannel not supported.");
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'SPORTS_MED_STOCK_DATA' || e.key === 'SPORTS_MED_LOGS') {
+        loadDataFromStorage();
+        refreshStaffView();
+        renderAdminDashboardStats();
+        renderAdminTable();
+        renderUnreturnedEquipmentTable();
+        renderUnitSettlementView();
+        renderLogsTable();
+      }
+    });
+
+    function loadDataFromStorage() {
+      const savedStocks = localStorage.getItem('SPORTS_MED_STOCK_DATA');
+      const savedLogs = localStorage.getItem('SPORTS_MED_LOGS');
+      const savedEvents = localStorage.getItem('SPORTS_MED_EVENTS');
+
+      if (savedEvents) {
+        try { eventsList = JSON.parse(savedEvents); } catch(e) {}
+      }
+      if (savedStocks) {
+        try {
+          eventStockData = JSON.parse(savedStocks);
+          Object.values(eventStockData).forEach(stocks => {
+            Object.values(stocks).forEach(item => {
+              if (item.consumedQty === undefined) item.consumedQty = 0;
+            });
+          });
+        } catch(e) {}
+      }
+      if (savedLogs) {
+        try { transactionLogs = JSON.parse(savedLogs); } catch(e) {}
+      }
+    }
+
+    function saveDataToStorage() {
+      localStorage.setItem('SPORTS_MED_STOCK_DATA', JSON.stringify(eventStockData));
+      localStorage.setItem('SPORTS_MED_LOGS', JSON.stringify(transactionLogs));
+      localStorage.setItem('SPORTS_MED_EVENTS', JSON.stringify(eventsList));
+
+      if (syncChannel) {
+        syncChannel.postMessage({ type: 'DATA_UPDATED', timestamp: Date.now() });
+      }
+    }
+
+    function initializeStockData() {
+      const savedStocks = localStorage.getItem('SPORTS_MED_STOCK_DATA');
+      if (savedStocks) {
+        loadDataFromStorage();
+        return;
+      }
+
+      eventsList.forEach((ev, evIdx) => {
+        eventStockData[ev.id] = {};
+        DEFAULT_MASTER_ITEMS.forEach(item => {
+          const factor = evIdx === 0 ? 1 : 0.8;
+          eventStockData[ev.id][item.id] = {
+            warehouseQty: Math.round(item.defaultWh * factor),
+            pickupQty: Math.round(item.defaultPk * factor),
+            borrowedQty: item.isEquipment ? (evIdx === 0 ? 1 : 0) : 0,
+            consumedQty: item.isEquipment ? 0 : 0
+          };
+        });
+      });
+
+      transactionLogs.push(
+        {
+          id: "L1",
+          time: new Date(Date.now() - 3600000 * 4).toLocaleString('zh-TW', { hour12: false }),
+          eventId: "EV_MIAOLI",
+          eventName: "苗栗計畫隨隊",
+          unit: "田徑競賽組",
+          user: "王防護師",
+          actionType: "checkout",
+          isEquipment: false,
+          itemId: "T02",
+          itemName: "運動貼布-1.5 吋寬",
+          qty: 6,
+          unitName: "卷",
+          note: "預防性踝關節貼紮"
+        },
+        {
+          id: "L2",
+          time: new Date(Date.now() - 3600000 * 3).toLocaleString('zh-TW', { hour12: false }),
+          eventId: "EV_MIAOLI",
+          eventName: "苗栗計畫隨隊",
+          unit: "田徑競賽組",
+          user: "王防護師",
+          actionType: "return",
+          isEquipment: false,
+          itemId: "T02",
+          itemName: "運動貼布-1.5 吋寬",
+          qty: 2,
+          unitName: "卷",
+          note: "賽程結束，剩餘未用完2卷退回"
+        },
+        {
+          id: "L3",
+          time: new Date(Date.now() - 3600000 * 2).toLocaleString('zh-TW', { hour12: false }),
+          eventId: "EV_MIAOLI",
+          eventName: "苗栗計畫隨隊",
+          unit: "球場機動第一哨點",
+          user: "張助理",
+          actionType: "checkout",
+          isEquipment: true,
+          itemId: "E01",
+          itemName: "防護包",
+          qty: 1,
+          unitName: "個",
+          note: "巡場公用急救包"
+        }
+      );
+      saveDataToStorage();
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastNotificationBox');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const bg = type === 'error' ? 'bg-rose-600' : (type === 'success' ? 'bg-teal-700' : 'bg-slate-900');
+
+      toast.className = `${bg} text-white px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-semibold flex items-center gap-2 fade-enter pointer-events-auto max-w-sm`;
+      toast.innerHTML = `
+        <span>${type === 'error' ? '❌' : (type === 'success' ? '✅' : 'ℹ️')}</span>
+        <span class="flex-1">${message}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    /* 雲端自動同步與定時拉取引擎 */
+    let adminCloudApi = localStorage.getItem('SPORTS_MED_ADMIN_CLOUD_API') || '';
+    let autoSyncTimer = null;
+
+    function testCloudUrlInBrowser() {
+      const url = document.getElementById('adminCloudApiUrl')?.value.trim() || adminCloudApi;
+      if (!url) {
+        showToast('請先貼入 API 網址！', 'error');
+        return;
+      }
+      window.open(url, '_blank');
+    }
+
+    async function diagnoseCloudConnection() {
+      const url = document.getElementById('adminCloudApiUrl')?.value.trim() || adminCloudApi;
+      const box = document.getElementById('cloudDiagnosticResult');
+      if (!box) return;
+
+      if (!url) {
+        box.classList.remove('hidden');
+        box.innerHTML = '❌ <strong>錯誤：</strong>尚未輸入 API 網址！請貼上以 /exec 結尾的網址。';
+        return;
+      }
+
+      box.classList.remove('hidden');
+      box.className = "text-[11px] text-slate-800 bg-white/90 p-2.5 rounded-lg border border-slate-300 leading-relaxed font-mono break-all";
+      box.innerHTML = '⏳ 正在連線測試 Google 雲端 API (同時嘗試 Fetch 與 JSONP)...';
+
+      // 1. 先用 JSONP 測試（可突破 CORS 與 file:/// 限制）
+      try {
+        const jsonpData = await fetchViaJsonp(url, 6000);
+        if (jsonpData && jsonpData.status === 'success') {
+          box.innerHTML = `✅ <strong>連線大成功！</strong> (JSONP 通道暢通)<br>Google 雲端已正確回傳資料，目前線上共有 <strong>${(jsonpData.data || []).length}</strong> 筆登記資料。`;
+          box.className = "text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-lg border border-emerald-300 leading-relaxed";
+          applyCloudLogs(jsonpData.data);
+          return;
+        }
+      } catch(e) {
+        console.warn("JSONP attempt finished with notice, trying standard fetch...", e);
+      }
+
+      // 2. 若 JSONP 未回傳，再用標準 fetch 檢測
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        
+        let json = null;
+        try { json = JSON.parse(text); } catch(e) {}
+
+        if (json && json.status === 'success') {
+          box.innerHTML = `✅ <strong>連線大成功！</strong><br>Google 雲端已正確回傳資料，目前線上共有 <strong>${(json.data || []).length}</strong> 筆登記資料。`;
+          box.className = "text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-lg border border-emerald-300 leading-relaxed";
+          applyCloudLogs(json.data);
+        } else if (text.includes('accounts.google.com') || text.includes('Sign in')) {
+          box.innerHTML = '⚠️ <strong>權限被阻擋：Google 要求登入！</strong><br>請回到 Apps Script 的「管理部署」➔ 編輯 ➔ 將「誰可以存取」改成<strong>「所有人 (Anyone)」</strong>，不能選「具備 Google 帳號的任何人」。';
+          box.className = "text-[11px] text-rose-900 bg-rose-50 p-2.5 rounded-lg border border-rose-300 leading-relaxed";
+        } else {
+          box.innerHTML = `⚠️ <strong>回傳內容不是預期格式：</strong><br>${text.slice(0, 120)}...<br>請確認 Apps Script 內有完整貼上 <code>doGet</code> 程式碼並建立「新版本」部署。`;
+          box.className = "text-[11px] text-amber-900 bg-amber-50 p-2.5 rounded-lg border border-amber-300 leading-relaxed";
+        }
+      } catch(err) {
+        box.innerHTML = `❌ <strong>連線遭阻擋 (Failed to fetch)</strong><br><br>` +
+          `👉 <strong>請點擊上方按鈕「🔗 在新分頁打開」查看：</strong><br>` +
+          `1. 若新分頁跳出「<strong>要求登入</strong>」：權限未設為「所有人 (Anyone)」。<br>` +
+          `2. 若使用<strong>學校/公司帳號</strong>：Google Workspace 網域會封鎖對外開放，請改用<strong>個人 @gmail.com</strong> 帳號建立試算表。<br>` +
+          `3. 若在新分頁看得到 <code>{"status":"success"...}</code>：請確保您的 Apps Script 中的 <code>doGet</code> 有加入 <code>callback</code> 支援！`;
+        box.className = "text-[11px] text-rose-900 bg-rose-50 p-2.5 rounded-lg border border-rose-300 leading-relaxed";
+      }
+    }
+
+    // JSONP 通道（專門解決本機 file:/// 與瀏覽器 CORS 擋截）
+    function fetchViaJsonp(url, timeoutMs = 7000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'sports_med_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const script = document.createElement('script');
+        const sep = url.includes('?') ? '&' : '?';
+        const timeout = setTimeout(() => {
+          cleanup();
+          reject(new Error('JSONP timeout'));
+        }, timeoutMs);
+
+        function cleanup() {
+          if (script.parentNode) script.parentNode.removeChild(script);
+          delete window[callbackName];
+          clearTimeout(timeout);
+        }
+
+        window[callbackName] = function(data) {
+          cleanup();
+          resolve(data);
+        };
+
+        script.src = `${url}${sep}callback=${callbackName}`;
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('JSONP script load error'));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function applyCloudLogs(cloudLogs) {
+      if (!Array.isArray(cloudLogs)) return;
+      const timeLabel = document.getElementById('lastCloudSyncTime');
+      if (timeLabel) timeLabel.innerText = new Date().toLocaleTimeString('zh-TW');
+
+      let addedCount = 0;
+      cloudLogs.forEach(cLog => {
+        const exists = transactionLogs.some(local => 
+          local.time === cLog.time && 
+          local.user === cLog.user && 
+          local.itemName === cLog.itemName &&
+          local.qty == cLog.qty
+        );
+        if (!exists) {
+          addedCount++;
+          const isCheckout = cLog.actionType ? cLog.actionType.includes('領出') || cLog.actionType.includes('借出') : true;
+          transactionLogs.unshift({
+            id: 'CLOUD_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            time: cLog.time,
+            eventName: cLog.eventName || '隨隊活動',
+            unit: cLog.unit || '現場組別',
+            user: cLog.user || '現場人員',
+            actionType: isCheckout ? 'checkout' : 'return',
+            isEquipment: cLog.actionType ? cLog.actionType.includes('器材') : false,
+            itemId: cLog.itemId || 'C_ITEM',
+            itemName: cLog.itemName,
+            qty: parseInt(cLog.qty, 10) || 1,
+            unitName: cLog.unitName || '件',
+            note: cLog.note || ''
+          });
+        }
+      });
+
+      if (addedCount > 0) {
+        saveDataToStorage();
+        refreshStaffView();
+        renderAdminDashboardStats();
+        renderAdminTable();
+        renderUnreturnedEquipmentTable();
+        renderUnitSettlementView();
+        renderLogsTable();
+      }
+    }
+
+    async function manualPullFromCloud(isBackground = false) {
+      if (!adminCloudApi) {
+        if (!isBackground) showToast('請先填寫 Google Apps Script API 網址！', 'error');
+        return;
+      }
+
+      // 優先使用 JSONP 模式，徹底避免 Failed to fetch
+      try {
+        const jsonpResult = await fetchViaJsonp(adminCloudApi, 8000);
+        if (jsonpResult && jsonpResult.status === 'success' && Array.isArray(jsonpResult.data)) {
+          applyCloudLogs(jsonpResult.data);
+          if (!isBackground) {
+            showToast(`已成功從雲端同步！線上共 ${jsonpResult.data.length} 筆資料`, 'success');
+          }
+          return;
+        }
+      } catch(e) {
+        console.warn('JSONP fetch failed, falling back to standard fetch...', e);
+      }
+
+      // 備援方案：標準 Fetch
+      try {
+        const res = await fetch(adminCloudApi);
+        const result = await res.json();
+        if (result && result.status === 'success' && Array.isArray(result.data)) {
+          applyCloudLogs(result.data);
+          if (!isBackground) {
+            showToast(`已成功從雲端同步！共載入 ${result.data.length} 筆明細`, 'success');
+          }
+        } else {
+          throw new Error('回傳資料格式不符');
+        }
+      } catch(err) {
+        if (!isBackground) {
+          showToast(`雲端連線失敗！原因：${err.message || '連線受阻'}，請點彈窗內「檢測連線」`, 'error');
+        }
+      }
+    }
+
+    /* 雲端同步中心與 QR Code 功能補齊 */
+    function initAdminCloudUI() {
+      adminCloudApi = localStorage.getItem('SPORTS_MED_ADMIN_CLOUD_API') || '';
+      const dot = document.getElementById('adminCloudPulseDot');
+      const text = document.getElementById('adminCloudStatusText');
+      const timeLabel = document.getElementById('lastCloudSyncTime');
+
+      if (adminCloudApi) {
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        if (text) text.innerText = "☁️ 雲端已連線";
+        startAutoSyncPolling();
+      } else {
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-slate-400";
+        if (text) text.innerText = "☁️ 待設定 API";
+        if (timeLabel) timeLabel.innerText = "尚未設定 API";
+      }
+    }
+
+    function openCloudCenterModal() {
+      const urlInput = document.getElementById('adminCloudApiUrl');
+      const intervalSelect = document.getElementById('adminAutoSyncInterval');
+      if (urlInput) urlInput.value = adminCloudApi;
+      const savedInterval = localStorage.getItem('SPORTS_MED_AUTO_SYNC_INTERVAL');
+      if (intervalSelect && savedInterval !== null) {
+        intervalSelect.value = savedInterval;
+      }
+      const modal = document.getElementById('cloudCenterModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function saveAdminCloudSettings() {
+      const urlInput = document.getElementById('adminCloudApiUrl');
+      const intervalSelect = document.getElementById('adminAutoSyncInterval');
+      const newUrl = (urlInput?.value || '').trim();
+      const interval = intervalSelect ? intervalSelect.value : '15000';
+
+      adminCloudApi = newUrl;
+      localStorage.setItem('SPORTS_MED_ADMIN_CLOUD_API', newUrl);
+      localStorage.setItem('SPORTS_MED_AUTO_SYNC_INTERVAL', interval);
+
+      initAdminCloudUI();
+      closeModal('cloudCenterModal');
+      showToast('已成功儲存雲端連線與同步頻率設定！', 'success');
+
+      if (adminCloudApi) {
+        manualPullFromCloud(false);
+      }
+    }
+
+    function startAutoSyncPolling() {
+      if (autoSyncTimer) {
+        clearInterval(autoSyncTimer);
+        autoSyncTimer = null;
+      }
+
+      const intervalSelect = document.getElementById('adminAutoSyncInterval');
+      const interval = parseInt(intervalSelect?.value || localStorage.getItem('SPORTS_MED_AUTO_SYNC_INTERVAL') || '15000', 10);
+
+      if (interval > 0 && adminCloudApi) {
+        autoSyncTimer = setInterval(() => {
+          manualPullFromCloud(true);
+        }, interval);
+      }
+    }
+
+    function openQrShareModal() {
+      const shareInput = document.getElementById('portalShareUrlInput');
+      const qrImg = document.getElementById('qrCodeImgDisplay');
+
+      // 產生領用站專屬網址
+      let currentHref = window.location.href;
+      let portalUrl = currentHref.replace(/sports_medical_inventory\.html.*$/, 'sports_pickup_portal.html');
+      if (!portalUrl.includes('sports_pickup_portal.html')) {
+        portalUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/sports_pickup_portal.html');
+      }
+
+      if (shareInput) shareInput.value = portalUrl;
+      if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(portalUrl)}`;
+      }
+
+      const modal = document.getElementById('qrShareModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function copyPortalUrl() {
+      const input = document.getElementById('portalShareUrlInput');
+      if (!input) return;
+      input.select();
+      input.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showToast('已成功複製現場領用站網址！', 'success');
+      } catch (err) {
+        showToast('複製失敗，請手動選取網址複製', 'error');
+      }
+    }
+
+    window.onload = function() {
+      initializeStockData();
+      renderEventDropdowns();
+      refreshStaffView();
+      initAdminCloudUI();
+    };
+  </script>
+</body>
+</html>
