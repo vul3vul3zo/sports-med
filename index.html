@@ -612,7 +612,7 @@
         unit: unit,
         actionType: currentActionType,
         itemId: item.id,
-        itemName: item.name, // 🚀 關鍵：確保抓取的是真正的中文品項名稱
+        itemName: item.name,
         isEquipment: item.isEquipment,
         qty: qty,
         unitName: item.unit,
@@ -646,7 +646,7 @@
         unit: unit,
         actionType: type,
         itemId: item.id,
-        itemName: item.name, // 🚀 關鍵：確保抓取的是真正的中文品項名稱
+        itemName: item.name,
         isEquipment: item.isEquipment,
         qty: qty,
         unitName: item.unit,
@@ -716,7 +716,7 @@
         actionType: act.actionType,
         isEquipment: act.isEquipment,
         itemId: act.itemId,
-        itemName: act.itemName, // 🚀 關鍵：確保傳送的是真實中文名稱
+        itemName: act.itemName,
         qty: act.qty,
         unitName: act.unitName,
         note: act.note
@@ -725,8 +725,10 @@
       transactionLogs.unshift(newLog);
       saveStateToStorage();
 
-      // 觸發雲端寫入
-      dispatchContinuousCloudWrite(newLog);
+      // 嚴格防呆：唯有當 itemName 存在且數量大時才真正送出給雲端
+      if (newLog.itemName && newLog.qty > 0) {
+        dispatchContinuousCloudWrite(newLog);
+      }
 
       closeModal('confirmActionModal');
       pendingConfirmation = null;
@@ -853,9 +855,12 @@
       showToast(isCloudSyncEnabled && cloudApiUrl ? '已儲存雲端 API 設定！' : '目前為本機模式', 'success');
     }
 
-    // 精準單一通道寫入：動態 Form POST + Nonce 序號去重
+    // 精準單一通道寫入：動態 Form POST + 防呆檢查（絕對不送空白/未指定）
     function dispatchContinuousCloudWrite(logData) {
       if (!isCloudSyncEnabled || !cloudApiUrl) return;
+      if (!logData || !logData.itemName || logData.itemName === '未指定品項' || !logData.qty) {
+        return; // 防呆攔截：沒有品項名稱絕不發送
+      }
 
       const nonce = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
       const payload = {
@@ -867,7 +872,7 @@
         actionType: logData.actionType,
         isEquipment: logData.isEquipment ? "true" : "false",
         itemId: logData.itemId,
-        itemName: logData.itemName, // 🚀 關鍵：確保將真實中文名稱傳遞給試算表
+        itemName: logData.itemName, // 確保送出的是真實中文名稱
         qty: String(logData.qty),
         unitName: logData.unitName,
         note: logData.note || '',
