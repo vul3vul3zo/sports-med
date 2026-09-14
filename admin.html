@@ -1221,7 +1221,7 @@
         showToast(`🔄 [${act.unit}] ${act.user} 已成功退回/歸還 ${act.qty} ${act.unitName}「${act.itemName}」！`, 'success');
       }
 
-      const newLogObj = {
+      transactionLogs.unshift({
         id: 'LOG_' + Date.now(),
         time: new Date().toLocaleString('zh-TW', { hour12: false }),
         eventId: act.eventId,
@@ -1235,14 +1235,9 @@
         qty: act.qty,
         unitName: act.unitName,
         note: act.note
-      };
+      });
 
-      transactionLogs.unshift(newLogObj);
       saveDataToStorage();
-
-      // 🚀 送出至 Google 試算表
-      dispatchContinuousCloudWrite(newLogObj);
-
       closeModal('confirmActionModal');
       pendingConfirmationAction = null;
 
@@ -1414,7 +1409,7 @@
         stock.borrowedQty = Math.max(0, stock.borrowedQty - log.qty);
       }
 
-      const returnLogObj = {
+      transactionLogs.unshift({
         id: 'LOG_' + Date.now(),
         time: new Date().toLocaleString('zh-TW', { hour12: false }),
         eventId: log.eventId,
@@ -1428,10 +1423,7 @@
         qty: log.qty,
         unitName: log.unitName || log.unit || '件',
         note: '後台確認器材收回完成'
-      };
-
-      transactionLogs.unshift(returnLogObj);
-      dispatchContinuousCloudWrite(returnLogObj);
+      });
 
       saveDataToStorage();
       showToast(`已確認收回 ${log.user} 借用之「${log.itemName}」！`, 'success');
@@ -1742,7 +1734,7 @@
 
       if (dir === 'inbound_warehouse') {
         stock.warehouseQty += qty;
-        const inboundLogObj = {
+        transactionLogs.unshift({
           id: 'LOG_' + Date.now(),
           time: new Date().toLocaleString('zh-TW', { hour12: false }),
           eventId: eventId,
@@ -1756,10 +1748,7 @@
           qty: qty,
           unitName: item.unit,
           note: '採購進貨入後台庫存倉'
-        };
-        transactionLogs.unshift(inboundLogObj);
-        dispatchContinuousCloudWrite(inboundLogObj);
-
+        });
         showToast(`已成功進貨 ${qty} ${item.unit}「${item.name}」入大倉！`, 'success');
       } else if (dir === 'to_pickup') {
         if (stock.warehouseQty < qty) {
@@ -2045,12 +2034,13 @@
       }, 3500);
     }
 
+    let adminCloudApi = ADMIN_DEFAULT_API_URL;
     let autoSyncTimer = null;
     let isFetchingCloud = false;
 
     function fetchViaJsonp(url, timeoutMs = 6000) {
       return new Promise((resolve, reject) => {
-        const callbackName = 'sports_med_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+        const callbackName = 'sports_med_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
         const script = document.createElement('script');
         const sep = url.includes('?') ? '&' : '?';
         const timeout = setTimeout(() => {
@@ -2093,7 +2083,7 @@
           Number(local.qty) === Number(cLog.qty)
         );
 
-        if (!exists && cLog.itemName && cLog.itemName !== '未指定品項') {
+        if (!exists && cLog.itemName) {
           const isCheckout = cLog.actionType ? (cLog.actionType.includes('領出') || cLog.actionType.includes('借出')) : true;
           const isEquip = cLog.actionType ? cLog.actionType.includes('器材') : false;
           const qty = Number(cLog.qty) || 1;
@@ -2169,7 +2159,7 @@
     }
 
     async function manualPullFromCloud(isBackground = false) {
-      if (!ADMIN_DEFAULT_API_URL || isFetchingCloud) return;
+      if (!adminCloudApi || isFetchingCloud) return;
 
       isFetchingCloud = true;
       const spin = document.getElementById('instantSyncSpinner');
@@ -2180,7 +2170,7 @@
       }
 
       try {
-        const jsonpResult = await fetchViaJsonp(ADMIN_DEFAULT_API_URL, 5000);
+        const jsonpResult = await fetchViaJsonp(adminCloudApi, 5000);
         if (jsonpResult && jsonpResult.status === 'success' && Array.isArray(jsonpResult.data)) {
           applyCloudLogs(jsonpResult.data);
           if (!isBackground) {
@@ -2194,8 +2184,8 @@
       } catch(e) {}
 
       try {
-        const sep = ADMIN_DEFAULT_API_URL.includes('?') ? '&' : '?';
-        const res = await fetch(`${ADMIN_DEFAULT_API_URL}${sep}_nocache=${Date.now()}`);
+        const sep = adminCloudApi.includes('?') ? '&' : '?';
+        const res = await fetch(`${adminCloudApi}${sep}_nocache=${Date.now()}`);
         const result = await res.json();
         if (result && result.status === 'success' && Array.isArray(result.data)) {
           applyCloudLogs(result.data);
@@ -2214,66 +2204,11 @@
       }
     }
 
-    function dispatchContinuousCloudWrite(logData) {
-      if (!ADMIN_DEFAULT_API_URL || !logData || !logData.itemName || logData.itemName === '未指定品項') return;
-
-      const nonce = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
-      const payload = {
-        action: 'add',
-        time: logData.time,
-        eventName: logData.eventName,
-        unit: logData.unit,
-        user: logData.user,
-        actionType: logData.actionType,
-        isEquipment: logData.isEquipment ? "true" : "false",
-        itemId: logData.itemId,
-        itemName: logData.itemName,
-        qty: String(logData.qty),
-        unitName: logData.unitName,
-        note: logData.note || '',
-        _nonce: nonce
-      };
-
-      try {
-        const frameName = 'cloud_tx_frame_' + nonce;
-        const iframe = document.createElement('iframe');
-        iframe.name = frameName;
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-
-        const form = document.createElement('form');
-        form.target = frameName;
-        form.method = 'POST';
-        form.action = ADMIN_DEFAULT_API_URL;
-        form.style.display = 'none';
-
-        Object.keys(payload).forEach(key => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = key;
-          input.value = payload[key];
-          form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-
-        setTimeout(() => {
-          try {
-            if (form.parentNode) form.parentNode.removeChild(form);
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-          } catch(e) {}
-        }, 15000);
-      } catch (e) {
-        console.warn("Cloud write submission error:", e);
-      }
-    }
-
     function initAdminCloudUI() {
       const dot = document.getElementById('adminCloudPulseDot');
       const text = document.getElementById('adminCloudStatusText');
       if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-      if (text) text.innerText = "☁️ 雲端永久連線";
+      if (text) text.innerText = "☁️ 雲端即時連動中";
       startAutoSyncPolling();
       manualPullFromCloud(true);
     }
@@ -2289,7 +2224,7 @@
       }
       const intervalSelect = document.getElementById('adminAutoSyncInterval');
       const interval = parseInt(intervalSelect?.value || '5000', 10);
-      if (interval > 0 && ADMIN_DEFAULT_API_URL) {
+      if (interval > 0 && adminCloudApi) {
         autoSyncTimer = setInterval(() => {
           manualPullFromCloud(true);
         }, interval);
