@@ -4,20 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>運動防護物資 • 現場領用登記站</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
-    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scroll::-webkit-scrollbar-track { background: #f8fafc; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .fade-enter { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white pb-10">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased pb-10 selection:bg-teal-500 selection:text-white">
 
+  <!-- 頂部狀態列 -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
       <div class="flex items-center justify-between h-16">
@@ -29,152 +26,187 @@
           </div>
           <div>
             <h1 class="text-base sm:text-lg font-black text-slate-900 leading-tight">現場物資領用登記站</h1>
-            <p class="text-xs text-slate-500 font-medium">雲端直接連動 Google 試算表</p>
+            <p class="text-xs text-slate-500 font-medium">前線防護員專用 ⇄ 雲端自動同步連線</p>
           </div>
         </div>
-
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>☁️ 雲端同步中</span>
-          </span>
-        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>☁️ 雲端連線中</span>
+        </span>
       </div>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-5">
-    <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-black text-lg">🎯</span>
-        <div>
-          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">當前值勤隨隊專案</div>
-          <select id="eventSelect" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-800 outline-none mt-1">
-            <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
-            <option value="桃園計畫隨隊">桃園計畫隨隊</option>
-            <option value="其他活動備註">其他活動備註</option>
-          </select>
-        </div>
-      </div>
-    </div>
 
+    <!-- 1. 活動專案與常駐登記人 -->
     <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">✍️</span>
+        <span class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">🎯</span>
         <div>
-          <div class="text-xs text-slate-200 font-bold">登記單位與經手人設定</div>
-          <div class="text-[11px] text-slate-400">每次送出會直接即時寫入 Google 試算表總部。</div>
+          <div class="text-xs text-slate-200 font-bold">當前值勤活動專案與人員</div>
+          <div class="text-[11px] text-slate-400">請確認目前活動與登記人，每次操作皆會即時寫入試算表。</div>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-amber-300 shrink-0">借領單位 *</span>
-          <input type="text" id="staffStationName" placeholder="例：田徑組" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none w-36">
+          <span class="text-xs font-bold text-amber-300 shrink-0">活動專案 *</span>
+          <select id="eventSelect" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-amber-400 font-bold">
+            <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+            <option value="桃園計畫隨隊">桃園計畫隨隊</option>
+          </select>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-slate-300 shrink-0">姓名 *</span>
-          <input type="text" id="staffUserName" placeholder="例：林防護員" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none w-32">
+          <span class="text-xs font-bold text-slate-300 shrink-0">登記人 *</span>
+          <input type="text" id="staffUserName" placeholder="例：林防護員" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-teal-400 w-28 sm:w-32">
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-300 shrink-0">單位 *</span>
+          <input type="text" id="staffStationName" placeholder="例：田徑組" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-teal-400 w-28 sm:w-32">
         </div>
       </div>
     </div>
 
+    <!-- 2. 主畫面：左側精確表單、右側即時現貨與快速增減按鈕 -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-        <h2 class="text-sm font-black text-slate-900 flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span> 快速登記表單
-        </h2>
 
-        <form onsubmit="handleSubmit(event)" class="space-y-3">
+      <!-- 左側：詳細登記表單 -->
+      <div class="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h2 class="text-sm font-black text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+            詳細登記表單
+          </h2>
+          <div class="flex bg-slate-100 p-1 rounded-xl text-xs">
+            <button id="typeBtnCheckout" type="button" onclick="setActionType('checkout')" class="px-2.5 py-1 rounded-lg font-bold bg-teal-600 text-white shadow-xs">領出/借出</button>
+            <button id="typeBtnReturn" type="button" onclick="setActionType('return')" class="px-2.5 py-1 rounded-lg font-bold text-slate-600">退回/歸還</button>
+          </div>
+        </div>
+
+        <form onsubmit="handlePortalDetailSubmit(event)" class="space-y-3 text-xs">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">選擇品項 *</label>
-            <select id="formItemSelect" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 outline-none">
-              <optgroup label="🏷️ 貼紮用品類">
-                <option value="皮膚保護膜-2.75 吋寬">皮膚保護膜-2.75 吋寬 (卷)</option>
-                <option value="運動貼布-1.5 吋寬">運動貼布-1.5 吋寬 (卷)</option>
-                <option value="輕型彈性貼布-2 吋寬">輕型彈性貼布-2 吋寬 (卷)</option>
-                <option value="重型彈性貼布-2 吋寬">重型彈性貼布-2 吋寬 (卷)</option>
-                <option value="重型彈性貼布-3 吋寬">重型彈性貼布-3 吋寬 (卷)</option>
-                <option value="肌內效貼布">肌內效貼布 (卷)</option>
-                <option value="膚色自黏貼布">膚色自黏貼布 (卷)</option>
-                <option value="動態貼布-2 吋">動態貼布-2 吋 (卷)</option>
-                <option value="動態貼布-3 吋">動態貼布-3 吋 (卷)</option>
-                <option value="史崔普肌動態活力貼-2 吋">史崔普肌動態活力貼-2 吋 (卷)</option>
-                <option value="史崔普肌動態活力貼-3 吋">史崔普肌動態活力貼-3 吋 (卷)</option>
-                <option value="高密度黏性保護墊-1/8 吋厚">高密度黏性保護墊-1/8 吋厚 (片)</option>
-                <option value="高密度黏性保護墊-1/4 吋厚">高密度黏性保護墊-1/4 吋厚 (片)</option>
-                <option value="4 吋加長型彈繃">4 吋加長型彈繃 (卷)</option>
-              </optgroup>
-              <optgroup label="🩹 外傷處理類">
-                <option value="水泡護墊(2nd Skin)">水泡護墊(2nd Skin) (片)</option>
-                <option value="鼻血止血棉棒">鼻血止血棉棒 (盒/支)</option>
-                <option value="酒精棉片">酒精棉片 (盒/片)</option>
-                <option value="優碘棉片">優碘棉片 (盒/片)</option>
-                <option value="防水透氣 OK 繃-一般型">防水透氣 OK 繃-一般型 (盒)</option>
-                <option value="防水透氣 OK 繃-大型">防水透氣 OK 繃-大型 (盒)</option>
-                <option value="生理食鹽水（小）">生理食鹽水（小） (瓶)</option>
-                <option value="3M 透氣紙膠 1 吋">3M 透氣紙膠 1 吋 (卷)</option>
-                <option value="3*3 吋滅菌紗布墊 (2 片裝)">3*3 吋滅菌紗布墊 (2 片裝) (包)</option>
-                <option value="檢診手套(無粉)">檢診手套(無粉) (隻)</option>
-                <option value="乾洗手">乾洗手 (瓶)</option>
-                <option value="滅菌傷口清洗棉棒">滅菌傷口清洗棉棒 (包)</option>
-              </optgroup>
-              <optgroup label="🛠️ 其它與非耗材器材類">
-                <option value="冰敷用塑膠袋">冰敷用塑膠袋 (包)</option>
-                <option value="冰敷膠膜">冰敷膠膜 (卷)</option>
-                <option value="熱身用運動軟膏">熱身用運動軟膏 (瓶)</option>
-                <option value="防護包">防護包 (個)</option>
-                <option value="冰桶-大">冰桶-大 (個)</option>
-                <option value="冰桶-中">冰桶-中 (個)</option>
-                <option value="可調式頸圈">可調式頸圈 (個)</option>
-                <option value="折疊處理床">折疊處理床 (個)</option>
-                <option value="捲式鋁製夾板">捲式鋁製夾板 (卷)</option>
-                <option value="三折式關節夾板">三折式關節夾板 (個)</option>
-                <option value="肢體固定三角巾">肢體固定三角巾 (條)</option>
-              </optgroup>
+            <label class="block font-bold text-slate-700 mb-1">分類過濾</label>
+            <select id="formCategorySelect" onchange="filterFormItems()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
+              <option value="all">全部分類</option>
+              <option value="貼紮">🏷️ 貼紮用品類</option>
+              <option value="外傷">🩹 外傷處理類</option>
+              <option value="其它">📦 其它裝備類</option>
             </select>
           </div>
-
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-bold text-slate-700">選擇品項 *</label>
+              <span id="itemBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">耗材</span>
+            </div>
+            <select id="formItemSelect" onchange="onFormItemChanged()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-semibold outline-none">
+            </select>
+          </div>
+          <div class="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+            <div>
+              <span class="text-[11px] text-teal-800 font-medium block">現場領用區現貨</span>
+              <span class="text-xl font-black text-teal-900" id="formCurrentStock">0 卷</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[11px] text-slate-500 block">外借中 / 消耗</span>
+              <span class="text-xs font-bold text-amber-600" id="formCurrentBorrowed">0 卷</span>
+            </div>
+          </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">動作類型 *</label>
-              <select id="formActionType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold outline-none">
-                <option value="領出">📦 領出 / 借出</option>
-                <option value="歸還">🔄 歸還 / 退回</option>
-              </select>
+              <label class="block font-bold text-slate-700 mb-1" id="formQtyLabel">數量 *</label>
+              <div class="relative">
+                <input type="number" id="formQtyInput" min="1" value="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
+                <span id="formUnitSuffix" class="absolute right-3 top-2 text-[11px] text-slate-400">卷</span>
+              </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">數量 *</label>
-              <input type="number" id="formQty" min="1" value="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold outline-none">
+              <label class="block font-bold text-slate-700 mb-1">備註說明</label>
+              <input type="text" id="formNoteInput" placeholder="例：腳踝固定" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none">
             </div>
           </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">備註說明</label>
-            <input type="text" id="formNote" placeholder="例：腳踝固定" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none">
-          </div>
-
-          <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl text-xs font-bold shadow transition">
-            確認送出登記至雲端
+          <button type="submit" id="formSubmitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold shadow transition">
+            確認送出登記
           </button>
         </form>
       </div>
 
-      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col">
+      <!-- 右側：領用區品項清單（附帶快速增減與送出按鈕） -->
+      <div class="lg:col-span-8 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-          <h3 class="text-base font-bold text-slate-900">☁️ 雲端試算表最新即時紀錄</h3>
-          <button onclick="fetchCloudLogs()" class="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-bold border border-teal-200">重新整理</button>
+          <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+            <span>⚡</span> 領用區現貨清單（直接點擊加減並快速送出）
+          </h3>
+          <input type="text" id="quickSearch" oninput="renderQuickPickupCards()" placeholder="🔍 搜尋品項..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1 text-xs outline-none w-36 sm:w-48">
         </div>
-        <div id="cloudLogsList" class="custom-scroll space-y-2 max-h-[500px] overflow-y-auto text-xs flex-1">
-          <div class="text-slate-400 text-center py-6">正在向雲端讀取紀錄...</div>
+        <div id="quickCardsContainer" class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
         </div>
       </div>
+
     </div>
+
   </main>
 
-  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold hidden"></div>
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold hidden z-50"></div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
+
+    // 完整指定品項分類
+    const MASTER_ITEMS = [
+      { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T02", name: "運動貼布-1.5 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T04", name: "重型彈性貼布-2 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T05", name: "重型彈性貼布-3 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T06", name: "肌內效貼布", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T07", name: "膚色自黏貼布", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T08", name: "動態貼布-2 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T09", name: "動態貼布-3 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T10", name: "史崔普肌動態活力貼-2 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T11", name: "史崔普肌動態活力貼-3 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "貼紮", isEquipment: false, unit: "片", defaultPk: 0 },
+      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "貼紮", isEquipment: false, unit: "片", defaultPk: 0 },
+      { id: "W01", name: "水泡護墊(2nd Skin)", category: "外傷", isEquipment: false, unit: "片", defaultPk: 0 },
+      { id: "W02", name: "鼻血止血棉棒", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
+      { id: "W03", name: "酒精棉片", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
+      { id: "W04", name: "優碘棉片", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
+      { id: "W05", name: "防水透氣 OK 繃-一般型", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
+      { id: "W06", name: "防水透氣 OK 繃-大型", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
+      { id: "W07", name: "生理食鹽水（小）", category: "外傷", isEquipment: false, unit: "瓶", defaultPk: 0 },
+      { id: "W08", name: "3M 透氣紙膠 1 吋", category: "外傷", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", category: "外傷", isEquipment: false, unit: "包", defaultPk: 0 },
+      { id: "W10", name: "檢診手套(無粉)", category: "外傷", isEquipment: false, unit: "隻", defaultPk: 0 },
+      { id: "W11", name: "乾洗手", category: "外傷", isEquipment: false, unit: "瓶", defaultPk: 0 },
+      { id: "W12", name: "滅菌傷口清洗棉棒", category: "外傷", isEquipment: false, unit: "包", defaultPk: 0 },
+      { id: "O01", name: "冰敷用塑膠袋", category: "其它", isEquipment: false, unit: "包", defaultPk: 0 },
+      { id: "O02", name: "冰敷膠膜", category: "其它", isEquipment: false, unit: "卷", defaultPk: 0 },
+      { id: "O03", name: "熱身用運動軟膏", category: "其它", isEquipment: false, unit: "瓶", defaultPk: 0 },
+      { id: "E01", name: "防護包", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E02", name: "冰桶-大", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E03", name: "冰桶-中", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E04", name: "可調式頸圈", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E05", name: "折疊處理床", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E06", name: "捲式鋁製夾板", category: "其它", isEquipment: true, unit: "卷", defaultPk: 0 },
+      { id: "E07", name: "三折式關節夾板", category: "Other", isEquipment: true, unit: "個", defaultPk: 0 },
+      { id: "E08", name: "肢體固定三角巾", category: "其它", isEquipment: true, unit: "條", defaultPk: 0 },
+      { id: "E09", name: "4 吋加長型彈繃", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 }
+    ];
+
+    let currentActionType = 'checkout';
+    let stockData = {};
+
+    function initStock() {
+      const saved = localStorage.getItem('SPORTS_MED_LOCAL_STOCK');
+      if (saved) {
+        try { stockData = JSON.parse(saved); return; } catch(e){}
+      }
+      stockData = { "苗栗計畫隨隊": {}, "桃園計畫隨隊": {} };
+      Object.keys(stockData).forEach(ev => {
+        MASTER_ITEMS.forEach(it => {
+          stockData[ev][it.id] = { pickup: 0, borrowed: 0 };
+        });
+      });
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -183,42 +215,155 @@
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
 
-    function handleSubmit(e) {
-      e.preventDefault();
-      const eventName = document.getElementById('eventSelect').value;
-      const unit = document.getElementById('staffStationName').value.trim();
-      const user = document.getElementById('staffUserName').value.trim();
-      const itemName = document.getElementById('formItemSelect').value;
-      const actionType = document.getElementById('formActionType').value;
-      const qty = document.getElementById('formQty').value;
-      const note = document.getElementById('formNote').value.trim();
+    function setActionType(type) {
+      currentActionType = type;
+      const bOut = document.getElementById('typeBtnCheckout');
+      const bIn = document.getElementById('typeBtnReturn');
+      const btn = document.getElementById('formSubmitBtn');
+      if (type === 'checkout') {
+        bOut.className = "px-2.5 py-1 rounded-lg font-bold bg-teal-600 text-white shadow-xs";
+        bIn.className = "px-2.5 py-1 rounded-lg font-bold text-slate-600";
+        btn.className = "w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold shadow transition";
+        btn.innerText = "確認送出領用登記";
+      } else {
+        bIn.className = "px-2.5 py-1 rounded-lg font-bold bg-amber-600 text-white shadow-xs";
+        bOut.className = "px-2.5 py-1 rounded-lg font-bold text-slate-600";
+        btn.className = "w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-xl font-bold shadow transition";
+        btn.innerText = "確認送出歸還登記";
+      }
+    }
 
-      if (!unit || !user) {
-        showToast('請填寫借領單位與登記人姓名！');
+    function filterFormItems() {
+      const cat = document.getElementById('formCategorySelect').value;
+      const select = document.getElementById('formItemSelect');
+      const ev = document.getElementById('eventSelect').value;
+      let items = MASTER_ITEMS;
+      if (cat !== 'all') items = items.filter(i => i.category === cat);
+
+      select.innerHTML = items.map(i => {
+        const s = stockData[ev]?.[i.id] || { pickup: 0 };
+        return `<option value="${i.id}">[${i.category}] ${i.name} (現貨: ${s.pickup} ${i.unit})</option>`;
+      }).join('');
+      onFormItemChanged();
+    }
+
+    function onFormItemChanged() {
+      const id = document.getElementById('formItemSelect').value;
+      const ev = document.getElementById('eventSelect').value;
+      const item = MASTER_ITEMS.find(i => i.id === id);
+      if (!item) return;
+      const s = stockData[ev]?.[id] || { pickup: 0, borrowed: 0 };
+      document.getElementById('formUnitSuffix').innerText = item.unit;
+      document.getElementById('formCurrentStock').innerText = `${s.pickup} ${item.unit}`;
+      document.getElementById('formCurrentBorrowed').innerText = `${s.borrowed} ${item.unit}`;
+    }
+
+    function renderQuickPickupCards() {
+      const container = document.getElementById('quickCardsContainer');
+      const search = (document.getElementById('quickSearch').value || '').trim().toLowerCase();
+      const ev = document.getElementById('eventSelect').value;
+      const cat = document.getElementById('formCategorySelect').value;
+
+      let items = MASTER_ITEMS;
+      if (cat !== 'all') items = items.filter(i => i.category === cat);
+      if (search) items = items.filter(i => i.name.toLowerCase().includes(search));
+
+      container.innerHTML = items.map(item => {
+        const s = stockData[ev]?.[item.id] || { pickup: 0, borrowed: 0 };
+        return `
+          <div class="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800">${item.category}</span>
+                <span class="text-xs font-bold text-slate-900">${item.name}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">現貨：<strong class="text-teal-700">${s.pickup} ${item.unit}</strong></div>
+            </div>
+            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <select id="qType_${item.id}" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none">
+                <option value="checkout">領出</option>
+                <option value="return">歸還</option>
+              </select>
+              <button type="button" onclick="stepQty('${item.id}', -1)" class="w-6 h-6 rounded bg-slate-200 text-xs font-bold">-</button>
+              <input type="number" id="qQty_${item.id}" min="1" value="1" class="w-10 text-center font-bold text-xs bg-white border border-slate-200 rounded py-0.5 outline-none">
+              <button type="button" onclick="stepQty('${item.id}', 1)" class="w-6 h-6 rounded bg-slate-200 text-xs font-bold">+</button>
+              <span class="text-[11px] text-slate-400">${item.unit}</span>
+              <button type="button" onclick="quickCardSubmit('${item.id}')" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs">送出</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function stepQty(id, delta) {
+      const input = document.getElementById(`qQty_${id}`);
+      if (!input) return;
+      let val = parseInt(input.value, 10) || 1;
+      val = Math.max(1, val + delta);
+      input.value = val;
+    }
+
+    function quickCardSubmit(id) {
+      const user = document.getElementById('staffUserName').value.trim();
+      const unit = document.getElementById('staffStationName').value.trim();
+      const ev = document.getElementById('eventSelect').value;
+      const type = document.getElementById(`qType_${id}`).value;
+      const qty = parseInt(document.getElementById(`qQty_${id}`).value, 10) || 1;
+      const item = MASTER_ITEMS.find(i => i.id === id);
+
+      if (!user || !unit) {
+        showToast('請先填寫登記人姓名與借領單位！');
         return;
       }
 
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = "⏳ 正在寫入雲端試算表...";
-      btn.disabled = true;
+      executeSubmit({ eventName: ev, user, unit, actionType: type, itemName: item.name, qty, unitName: item.unit, note: '快速登記' });
+    }
 
-      const payload = {
-        action: 'add',
-        time: new Date().toLocaleString('zh-TW', { hour12: false }),
-        eventName: eventName,
-        unit: unit,
-        user: user,
-        actionType: actionType,
-        itemName: itemName,
-        qty: qty,
-        unitName: '個/卷',
-        note: note
-      };
+    function handlePortalDetailSubmit(e) {
+      e.preventDefault();
+      const user = document.getElementById('staffUserName').value.trim();
+      const unit = document.getElementById('staffStationName').value.trim();
+      const ev = document.getElementById('eventSelect').value;
+      const itemId = document.getElementById('formItemSelect').value;
+      const qty = parseInt(document.getElementById('formQtyInput').value, 10);
+      const note = document.getElementById('formNoteInput').value.trim();
+      const item = MASTER_ITEMS.find(i => i.id === itemId);
+
+      if (!user || !unit) {
+        showToast('請填寫登記人姓名與借領單位！');
+        return;
+      }
+
+      executeSubmit({ eventName: ev, user, unit, actionType: currentActionType, itemName: item.name, qty, unitName: item.unit, note });
+    }
+
+    function executeSubmit(payload) {
+      const ev = payload.eventName;
+      const item = MASTER_ITEMS.find(i => i.name === payload.itemName);
+      if (!stockData[ev]) stockData[ev] = {};
+      if (!stockData[ev][item.id]) stockData[ev][item.id] = { pickup: 0, borrowed: 0 };
+
+      const s = stockData[ev][item.id];
+      if (payload.actionType === 'checkout') {
+        s.pickup = Math.max(0, s.pickup - payload.qty);
+        s.borrowed += payload.qty;
+      } else {
+        s.pickup += payload.qty;
+        s.borrowed = Math.max(0, s.borrowed - payload.qty);
+      }
+      localStorage.setItem('SPORTS_MED_LOCAL_STOCK', JSON.stringify(stockData));
+
+      // 送至 Google 試算表
+      const frameName = 'frame_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = frameName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
 
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = API_URL;
-      form.target = '_blank';
+      form.target = frameName;
       form.style.display = 'none';
 
       Object.keys(payload).forEach(k => {
@@ -231,53 +376,21 @@
 
       document.body.appendChild(form);
       form.submit();
-      document.body.removeChild(form);
 
       setTimeout(() => {
-        btn.innerText = "確認送出登記至雲端";
-        btn.disabled = false;
-        showToast('✅ 登記送出成功！已寫入 Google 試算表');
-        document.getElementById('formQty').value = '1';
-        document.getElementById('formNote').value = '';
-        fetchCloudLogs();
-      }, 1500);
-    }
-
-    function fetchCloudLogs() {
-      const container = document.getElementById('cloudLogsList');
-      const script = document.createElement('script');
-      const cbName = 'cb_' + Date.now();
-
-      window[cbName] = function(res) {
-        delete window[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-
-        if (res && res.status === 'success' && Array.isArray(res.data)) {
-          if (res.data.length === 0) {
-            container.innerHTML = `<div class="text-slate-400 text-center py-6">尚無任何雲端紀錄</div>`;
-            return;
-          }
-          container.innerHTML = res.data.reverse().map(l => `
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-slate-900">${l.itemName} <span class="text-teal-700 font-black">(${l.actionType} ${l.qty})</span></div>
-                <div class="text-[11px] text-slate-500">${l.eventName} • [${l.unit}] ${l.user} • ${l.note || '無備註'}</div>
-              </div>
-              <div class="text-[10px] font-mono text-slate-400">${l.time}</div>
-            </div>
-          `).join('');
-        }
-      };
-
-      script.src = `${API_URL}?callback=${cbName}&_t=${Date.now()}`;
-      script.onerror = () => {
-        container.innerHTML = `<div class="text-rose-600 text-center py-6">雲端連線失敗，請檢查網路</div>`;
-      };
-      document.body.appendChild(script);
+        document.body.removeChild(form);
+        document.body.removeChild(iframe);
+        showToast(`✅ 成功送出登記：${payload.itemName} x ${payload.qty}`);
+        filterFormItems();
+        renderQuickPickupCards();
+      }, 1000);
     }
 
     window.onload = function() {
-      fetchCloudLogs();
+      initStock();
+      filterFormItems();
+      renderQuickPickupCards();
+      document.getElementById('eventSelect').onchange = () => { filterFormItems(); renderQuickPickupCards(); };
     };
   </script>
 </body>
