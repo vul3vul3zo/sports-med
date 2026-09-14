@@ -3,57 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運動防護物資總管系統</title>
-  <!-- Tailwind CSS CDN -->
+  <title>運動防護物資總管系統 • 雲端雙向連動版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
-    .fade-enter { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-enter { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased pb-10">
 
+  <!-- 頂部導航列 -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
       <div class="flex items-center justify-between h-16">
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black">📊</div>
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white flex items-center justify-center font-black shadow-md">📊</div>
           <div>
-            <h1 class="text-base sm:text-lg font-black text-slate-900">運動防護物資總管系統</h1>
-            <p class="text-xs text-slate-500">初始歸零 ⇄ 新增活動 ⇄ 後台總控與雲端同步</p>
+            <h1 class="text-base sm:text-lg font-black text-slate-950">運動防護物資總管系統</h1>
+            <p class="text-xs text-slate-500 font-medium">後台總控 ⇄ Google 雲端試算表雙向即時同步</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
           <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
-            <button id="tabAdmin" onclick="switchTab('admin')" class="px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs">📊 後台庫存</button>
+            <button id="tabAdmin" onclick="switchTab('admin')" class="px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs">📊 後台庫存</button>
             <button id="tabUnits" onclick="switchTab('units')" class="px-3 py-1.5 rounded-lg text-slate-600">🏢 單位對帳</button>
             <button id="tabLogs" onclick="switchTab('logs')" class="px-3 py-1.5 rounded-lg text-slate-600">📑 流水明細</button>
           </div>
-          <button onclick="openNewEventModal()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition">➕ 新增活動專案</button>
-          <button onclick="syncAdminWithCloud()" class="px-3 py-1.5 bg-teal-50 text-teal-800 rounded-xl text-xs font-bold border border-teal-200">⚡ 立即刷新</button>
+          <button onclick="syncFromCloud()" class="px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs flex items-center gap-1">
+            <span>🔄</span> 立即向雲端重新整理
+          </button>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
 
-    <!-- 活動專案切換列 -->
-    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+    <!-- 活動專案選擇列 -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <span class="text-lg">🎯</span>
         <div>
-          <span class="text-[10px] font-bold text-slate-400 uppercase">當前檢視專案活動</span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase">當前控管專案活動</span>
           <div class="text-base font-black text-slate-900" id="adminActiveEventLabel">苗栗計畫隨隊</div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-xs font-bold text-slate-500">切換活動：</label>
         <select id="adminEventSelect" onchange="changeAdminEvent(this.value)" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none">
+          <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+          <option value="桃園計畫隨隊">桃園計畫隨隊</option>
+          <option value="其他活動備註">其他活動備註</option>
         </select>
+        <button onclick="openNewEventModal()" class="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold transition">➕ 新增活動</button>
       </div>
     </div>
 
@@ -80,18 +84,18 @@
 
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-black text-slate-900">📊 品項總表（初始預設歸零，請點擊「編輯數量」自由 Key 入）</h3>
+          <h3 class="text-sm font-black text-slate-900">📊 品項總表與數量編輯（修改後直接同步寫入 Google 試算表）</h3>
         </div>
         <div class="overflow-x-auto rounded-xl border border-slate-200">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                 <th class="py-3 px-3">品項名稱</th>
-                <th class="py-3 px-3">性質</th>
+                <th class="py-3 px-3">分類</th>
                 <th class="py-3 px-3 text-right">大倉庫存倉</th>
-                <th class="py-3 px-3 text-right">現場領用區</th>
+                <th class="py-3 px-3 text-right">現場領用區現貨</th>
                 <th class="py-3 px-3 text-right font-black text-slate-900">總在席量</th>
-                <th class="py-3 px-3 text-center">設定與 Key 數量</th>
+                <th class="py-3 px-3 text-center">編輯數量與撥發</th>
               </tr>
             </thead>
             <tbody id="adminStockTableBody" class="divide-y divide-slate-100 text-slate-700">
@@ -162,7 +166,7 @@
   <div id="editQtyModal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-900" id="editQtyTitle">✏️ Key 入與修改數量</h3>
+        <h3 class="text-base font-bold text-slate-900" id="editQtyTitle">✏️ 編輯與撥發數量</h3>
         <button onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
       </div>
       <form onsubmit="handleEditQtySubmit(event)" class="space-y-4 text-xs">
@@ -177,7 +181,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold">取消</button>
-          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">儲存數量設定</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">儲存並同步至雲端</button>
         </div>
       </form>
     </div>
@@ -188,48 +192,49 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
     const MASTER_ITEMS = [
-      { id: "T01", name: "皮膚保護膜-2.75 吋寬", unit: "卷" },
-      { id: "T02", name: "運動貼布-1.5 吋寬", unit: "卷" },
-      { id: "T03", name: "輕型彈性貼布-2 吋寬", unit: "卷" },
-      { id: "T04", name: "重型彈性貼布-2 吋寬", unit: "卷" },
-      { id: "T05", name: "重型彈性貼布-3 吋寬", unit: "卷" },
-      { id: "T06", name: "肌內效貼布", unit: "卷" },
-      { id: "T07", name: "膚色自黏貼布", unit: "卷" },
-      { id: "T08", name: "動態貼布-2 吋", unit: "卷" },
-      { id: "T09", name: "動態貼布-3 吋", unit: "卷" },
-      { id: "T10", name: "史崔普肌動態活力貼-2 吋", unit: "卷" },
-      { id: "T11", name: "史崔普肌動態活力貼-3 吋", unit: "卷" },
-      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", unit: "片" },
-      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", unit: "片" },
-      { id: "W01", name: "水泡護墊(2nd Skin)", unit: "片" },
-      { id: "W02", name: "鼻血止血棉棒", unit: "盒" },
-      { id: "W03", name: "酒精棉片", unit: "盒" },
-      { id: "W04", name: "優碘棉片", unit: "盒" },
-      { id: "W05", name: "防水透氣 OK 繃-一般型", unit: "盒" },
-      { id: "W06", name: "防水透氣 OK 繃-大型", unit: "盒" },
-      { id: "W07", name: "生理食鹽水（小）", unit: "瓶" },
-      { id: "W08", name: "3M 透氣紙膠 1 吋", unit: "卷" },
-      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", unit: "包" },
-      { id: "W10", name: "檢診手套(無粉)", unit: "隻" },
-      { id: "W11", name: "乾洗手", unit: "瓶" },
-      { id: "W12", name: "滅菌傷口清洗棉棒", unit: "包" },
-      { id: "O01", name: "冰敷用塑膠袋", unit: "包" },
-      { id: "O02", name: "冰敷膠膜", unit: "卷" },
-      { id: "O03", name: "熱身用運動軟膏", unit: "瓶" },
-      { id: "E01", name: "防護包", unit: "個" },
-      { id: "E02", name: "冰桶-大", unit: "個" },
-      { id: "E03", name: "冰桶-中", unit: "個" },
-      { id: "E04", name: "可調式頸圈", unit: "個" },
-      { id: "E05", name: "折疊處理床", unit: "個" },
-      { id: "E06", name: "捲式鋁製夾板", unit: "卷" },
-      { id: "E07", name: "三折式關節夾板", unit: "個" },
-      { id: "E08", name: "肢體固定三角巾", unit: "條" },
-      { id: "E09", name: "4 吋加長型彈繃", unit: "卷" }
+      { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "貼紮", unit: "卷" },
+      { id: "T02", name: "運動貼布-1.5 吋寬", category: "貼紮", unit: "卷" },
+      { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "貼紮", unit: "卷" },
+      { id: "T04", name: "重型彈性貼布-2 吋寬", category: "貼紮", unit: "卷" },
+      { id: "T05", name: "重型彈性貼布-3 吋寬", category: "貼紮", unit: "卷" },
+      { id: "T06", name: "肌內效貼布", category: "貼紮", unit: "卷" },
+      { id: "T07", name: "膚色自黏貼布", category: "貼紮", unit: "卷" },
+      { id: "T08", name: "動態貼布-2 吋", category: "貼紮", unit: "卷" },
+      { id: "T09", name: "動態貼布-3 吋", category: "貼紮", unit: "卷" },
+      { id: "T10", name: "史崔普肌動態活力貼-2 吋", category: "貼紮", unit: "卷" },
+      { id: "T11", name: "史崔普肌動態活力貼-3 吋", category: "貼紮", unit: "卷" },
+      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "貼紮", unit: "片" },
+      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "貼紮", unit: "片" },
+      { id: "W01", name: "水泡護墊(2nd Skin)", category: "外傷", unit: "片" },
+      { id: "W02", name: "鼻血止血棉棒", category: "外傷", unit: "盒" },
+      { id: "W03", name: "酒精棉片", category: "外傷", unit: "盒" },
+      { id: "W04", name: "優碘棉片", category: "外傷", unit: "盒" },
+      { id: "W05", name: "防水透氣 OK 繃-一般型", category: "外傷", unit: "盒" },
+      { id: "W06", name: "防水透氣 OK 繃-大型", category: "外傷", unit: "盒" },
+      { id: "W07", name: "生理食鹽水（小）", category: "外傷", unit: "瓶" },
+      { id: "W08", name: "3M 透氣紙膠 1 吋", category: "外傷", unit: "卷" },
+      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", category: "外傷", unit: "包" },
+      { id: "W10", name: "檢診手套(無粉)", category: "外傷", unit: "隻" },
+      { id: "W11", name: "乾洗手", category: "外傷", unit: "瓶" },
+      { id: "W12", name: "滅菌傷口清洗棉棒", category: "外傷", unit: "包" },
+      { id: "O01", name: "冰敷用塑膠袋", category: "其它", unit: "包" },
+      { id: "O02", name: "冰敷膠膜", category: "其它", unit: "卷" },
+      { id: "O03", name: "熱身用運動軟膏", category: "其它", unit: "瓶" },
+      { id: "E01", name: "防護包", category: "其它", unit: "個" },
+      { id: "E02", name: "冰桶-大", category: "其它", unit: "個" },
+      { id: "E03", name: "冰桶-中", category: "其它", unit: "個" },
+      { id: "E04", name: "可調式頸圈", category: "其它", unit: "個" },
+      { id: "E05", name: "折疊處理床", category: "其它", unit: "個" },
+      { id: "E06", name: "捲式鋁製夾板", category: "其它", unit: "卷" },
+      { id: "E07", name: "三折式關節夾板", category: "其它", unit: "個" },
+      { id: "E08", name: "肢體固定三角巾", category: "其它", unit: "條" },
+      { id: "E09", name: "4 吋加長型彈繃", category: "貼紮", unit: "卷" }
     ];
 
     let eventsList = ["苗栗計畫隨隊", "桃園計畫隨隊"];
     let currentEvent = "苗栗計畫隨隊";
-    let stockData = {}; // 初始預設全部歸零 (0)
+    let stockData = {};
+    let cloudLogsData = [];
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -243,7 +248,7 @@
         if (!stockData[ev]) stockData[ev] = {};
         MASTER_ITEMS.forEach(it => {
           if (!stockData[ev][it.id]) {
-            stockData[ev][it.id] = { wh: 0, pk: 0 }; // 初始全部歸零
+            stockData[ev][it.id] = { wh: 0, pk: 0 };
           }
         });
       });
@@ -253,19 +258,20 @@
       document.getElementById('viewAdmin').classList.add('hidden');
       document.getElementById('viewUnits').classList.add('hidden');
       document.getElementById('viewLogs').classList.add('hidden');
-      document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg text-slate-600";
-      document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg text-slate-600";
-      document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg text-slate-600";
+      document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
+      document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
+      document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
 
       if (tab === 'admin') {
         document.getElementById('viewAdmin').classList.remove('hidden');
-        document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+        document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
       } else if (tab === 'units') {
         document.getElementById('viewUnits').classList.remove('hidden');
-        document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+        document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
+        renderUnitSettlement();
       } else if (tab === 'logs') {
         document.getElementById('viewLogs').classList.remove('hidden');
-        document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+        document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
       }
     }
 
@@ -309,12 +315,12 @@
         return `
           <tr class="hover:bg-slate-50 transition border-b border-slate-100">
             <td class="py-3 px-3 font-bold text-slate-900">${it.name} (${it.unit})</td>
-            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">防護物資</span></td>
+            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">${it.category}</span></td>
             <td class="py-3 px-3 text-right font-bold text-indigo-700">${s.wh} ${it.unit}</td>
             <td class="py-3 px-3 text-right font-black text-teal-700">${s.pk} ${it.unit}</td>
             <td class="py-3 px-3 text-right font-black text-slate-900 bg-slate-50/50">${s.wh + s.pk} ${it.unit}</td>
             <td class="py-3 px-3 text-center">
-              <button onclick="openEditQty('${it.id}')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200">編輯數量</button>
+              <button onclick="openEditQty('${it.id}')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200">編輯/撥發數量</button>
             </td>
           </tr>
         `;
@@ -325,7 +331,7 @@
       const it = MASTER_ITEMS.find(i => i.id === itemId);
       const s = stockData[currentEvent][itemId] || { wh: 0, pk: 0 };
       document.getElementById('editItemId').value = itemId;
-      document.getElementById('editQtyTitle').innerText = `✏️ Key 入數量：${it.name}`;
+      document.getElementById('editQtyTitle').innerText = `✏️ 編輯數量與撥發：${it.name}`;
       document.getElementById('editWhQty').value = s.wh;
       document.getElementById('editPkQty').value = s.pk;
       document.getElementById('editQtyModal').classList.remove('hidden');
@@ -341,7 +347,21 @@
       document.getElementById('editQtyModal').classList.add('hidden');
       renderAdminTable();
       renderStats();
-      showToast('✅ 數量設定已更新！');
+
+      // 🚀 同步寫入雲端試算表紀錄
+      const it = MASTER_ITEMS.find(i => i.id === itemId);
+      sendCloudRecord({
+        eventName: currentEvent,
+        unit: '後台總倉',
+        user: '管理員',
+        actionType: '管理員庫存校正',
+        itemName: it.name,
+        qty: wh + pk,
+        unitName: it.unit,
+        note: `大倉:${wh}, 領用區:${pk}`
+      });
+
+      showToast('✅ 數量設定已更新並同步至雲端！');
     }
 
     function renderStats() {
@@ -355,40 +375,114 @@
       document.getElementById('statAllTotal').innerText = (wh + pk).toLocaleString();
       document.getElementById('statWarehouseTotal').innerText = wh.toLocaleString();
       document.getElementById('statPickupTotal').innerText = pk.toLocaleString();
-      document.getElementById('statBorrowedTotal').innerText = '0';
     }
 
-    function syncAdminWithCloud() {
-      const tbody = document.getElementById('adminLogsTableBody');
+    function syncFromCloud() {
+      showToast('⏳ 正在向 Google 試算表同步資料...');
       const script = document.createElement('script');
-      const cbName = 'cb_' + Date.now();
+      const cbName = 'sync_admin_' + Date.now();
 
       window[cbName] = function(res) {
         delete window[cbName];
         if (script.parentNode) script.parentNode.removeChild(script);
+
         if (res && res.status === 'success' && Array.isArray(res.data)) {
-          if (res.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">目前試算表尚無任何領用紀錄</td></tr>`;
-            return;
-          }
-          tbody.innerHTML = res.data.reverse().map(l => `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="py-3 px-3 font-mono text-slate-500">${l.time}</td>
-              <td class="py-3 px-3 font-bold text-slate-900">${l.eventName}</td>
-              <td class="py-3 px-3 font-bold text-amber-800">${l.unit} / ${l.user}</td>
-              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-bold ${l.actionType.includes('領') || l.actionType === 'checkout' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">${l.actionType}</span></td>
-              <td class="py-3 px-3 font-bold text-slate-900">${l.itemName}</td>
-              <td class="py-3 px-3 text-right font-black text-teal-700">${l.qty} ${l.unitName}</td>
-              <td class="py-3 px-3 text-slate-500">${l.note || '-'}</td>
-            </tr>
-          `).join('');
-          showToast('✅ 成功從雲端同步最新流水帳！');
+          cloudLogsData = res.data;
+          renderLogsTable(res.data);
+          renderUnitSettlement();
+          showToast('✅ 成功與 Google 試算表同步最新資料！');
         }
       };
 
       script.src = `${API_URL}?callback=${cbName}&_t=${Date.now()}`;
-      script.onerror = () => { showToast('雲端連線失敗'); };
+      script.onerror = () => { showToast('雲端同步連線失敗'); };
       document.body.appendChild(script);
+    }
+
+    function renderLogsTable(data) {
+      const tbody = document.getElementById('adminLogsTableBody');
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">尚無領用紀錄</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.slice().reverse().map(l => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-3 px-3 font-mono text-slate-500">${l.time}</td>
+          <td class="py-3 px-3 font-bold text-slate-900">${l.eventName}</td>
+          <td class="py-3 px-3 font-bold text-amber-800">${l.unit} / ${l.user}</td>
+          <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-bold ${l.actionType.includes('領') || l.actionType === 'checkout' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">${l.actionType}</span></td>
+          <td class="py-3 px-3 font-bold text-slate-900">${l.itemName}</td>
+          <td class="py-3 px-3 text-right font-black text-teal-700">${l.qty} ${l.unitName}</td>
+          <td class="py-3 px-3 text-slate-500">${l.note || '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUnitSettlement() {
+      const container = document.getElementById('unitSettlementContainer');
+      if (!cloudLogsData || cloudLogsData.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 py-6 text-center">尚無單位領借紀錄</div>`;
+        return;
+      }
+
+      const map = {};
+      cloudLogsData.forEach(l => {
+        const u = l.unit || '未指定單位';
+        if (!map[u]) map[u] = [];
+        map[u].push(l);
+      });
+
+      container.innerHTML = Object.keys(map).map(unitName => {
+        const logs = map[unitName];
+        return `
+          <div class="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h4 class="font-bold text-slate-900 text-sm">🏢 ${unitName}</h4>
+              <span class="text-xs text-slate-400 font-mono">${logs.length} 筆操作紀錄</span>
+            </div>
+            <div class="space-y-1 text-xs">
+              ${logs.map(l => `
+                <div class="flex justify-between py-1 px-2 rounded bg-slate-50">
+                  <span>[${l.time}] <strong>${l.user}</strong> ${l.actionType} <strong>${l.itemName}</strong> x ${l.qty} ${l.unitName}</span>
+                  <span class="text-slate-400">${l.eventName}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function sendCloudRecord(payload) {
+      const frameName = 'frame_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = frameName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = API_URL;
+      form.target = frameName;
+      form.style.display = 'none';
+
+      Object.keys(payload).forEach(k => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = k;
+        input.value = payload[k];
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      setTimeout(() => {
+        try {
+          document.body.removeChild(form);
+          document.body.removeChild(iframe);
+        } catch(e) {}
+      }, 1500);
     }
 
     window.onload = function() {
@@ -396,46 +490,8 @@
       renderAdminEvents();
       renderAdminTable();
       renderStats();
-      syncAdminWithCloud();
+      syncFromCloud();
     };
   </script>
 </body>
 </html>
-
-// 📦 現場前端將資料送往 Google 試算表的函數
-function sendDataToCloud(payload) {
-  // 這是您的 Google 雲端 API 管道網址
-  const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
-  
-  const frameName = 'cloud_frame_' + Date.now();
-  const iframe = document.createElement('iframe');
-  iframe.name = frameName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API_URL;
-  form.target = frameName;
-  form.style.display = 'none';
-
-  // 將所有登記欄位打包成隱藏欄位傳送
-  Object.keys(payload).forEach(key => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = key;
-    input.value = payload[key];
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-
-  // 1.5秒後自動清除隱藏表單與框架
-  setTimeout(() => {
-    try {
-      if (form.parentNode) form.parentNode.removeChild(form);
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    } catch(e) {}
-  }, 1500);
-}
