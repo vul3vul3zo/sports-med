@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運動防護耗材與器材活動物資管理系統</title>
+  <title>運動防護物資總管系統</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -37,6 +37,15 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
 
+  <!-- 頂部即時推播橫幅 -->
+  <div id="livePushBanner" class="hidden bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 text-white px-4 py-2.5 text-xs font-bold shadow-md transition-all flex items-center justify-between z-40 sticky top-0">
+    <div class="flex items-center gap-2">
+      <span class="animate-bounce text-sm">🔔</span>
+      <span id="livePushText">前線即時動態更新中...</span>
+    </div>
+    <button onclick="document.getElementById('livePushBanner').classList.add('hidden')" class="text-teal-200 hover:text-white text-sm">✕</button>
+  </div>
+
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -53,7 +62,7 @@
           </div>
         </div>
 
-        <!-- 視角分頁切換按鈕與雲端同步中心 -->
+        <!-- 視角分頁切換按鈕與雲端中心 -->
         <div class="flex items-center gap-2">
           <div class="flex items-center space-x-1 sm:space-x-1.5 bg-slate-100 p-1 rounded-xl text-xs sm:text-sm font-semibold">
             <button id="tabBtnStaff" onclick="switchMainTab('staff')" class="px-3 sm:px-4 py-1.5 rounded-lg transition-all text-teal-700 bg-white shadow-xs flex items-center gap-1.5 font-bold">
@@ -74,10 +83,17 @@
             </button>
           </div>
 
+          <!-- 立即連動刷新按鈕 -->
+          <button onclick="manualPullFromCloud(false)" title="立即強制同步試算表最新資料" class="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition flex items-center gap-1 shadow-2xs">
+            <span class="animate-spin text-sm" id="instantSyncSpinner" style="display:none;">⏳</span>
+            <span id="instantSyncIcon">⚡</span>
+            <span class="hidden sm:inline">立即刷新</span>
+          </button>
+
           <!-- 手機掃碼 QR Code 專區開關 -->
-          <button onclick="openQrShareModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition flex items-center gap-1.5 shadow-2xs">
+          <button onclick="openQrShareModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition flex items-center gap-1.5 shadow-2xs">
             <span>📱</span>
-            <span>手機掃碼填寫</span>
+            <span class="hidden sm:inline">手機掃碼填寫</span>
           </button>
 
           <!-- 雲端同步中心開關 -->
@@ -92,8 +108,8 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- 視角 1: 現場領用區 -->
     <section id="viewStaff" class="fade-enter space-y-6">
-      <!-- 頂部活動快捷選擇 Bar -->
       <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <span class="p-2.5 rounded-xl bg-teal-50 text-teal-700 text-lg font-bold">🎯</span>
@@ -112,13 +128,12 @@
         </div>
       </div>
 
-      <!-- 現場人員常駐快速設定列 -->
       <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <span class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">✍️</span>
           <div>
             <div class="text-xs text-slate-300 font-semibold">現場領還人員資訊</div>
-            <div class="text-xs text-slate-400">請先填寫登記人與借領單位，於右側清單直接輸入數字送出，送出前會有二次核對確認！</div>
+            <div class="text-xs text-slate-400">請填寫登記人與借領單位，於右側清單直接輸入數字送出，送出前會有二次核對確認。</div>
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -145,7 +160,6 @@
               <p class="text-[11px] text-slate-400">登記所屬單位、品項、數量與用途說明</p>
             </div>
 
-            <!-- 操作類型切換 -->
             <div class="flex bg-slate-100 p-1 rounded-xl">
               <button id="typeBtnCheckout" onclick="setStaffActionType('checkout')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-xs">
                 領出消耗 / 借出
@@ -175,9 +189,9 @@
                   <option value="all">🌐 全部物資分類 (不限)</option>
                   <option value="耗材貼布類">🏷️ 耗材貼布類</option>
                   <option value="耗材外傷類">🩹 耗材外傷類</option>
-                  <option value="耗材其他類">📦 耗材其他類 (其他消耗備品)</option>
-                  <option value="非耗材類">🛠️ 非耗材器材類 (常規需借還)</option>
-                  <option value="非耗材其他類">🧰 非耗材其他類 (其他列管器材)</option>
+                  <option value="耗材其他類">📦 耗材其他類</option>
+                  <option value="非耗材類">🛠️ 非耗材器材類</option>
+                  <option value="非耗材其他類">🧰 非耗材其他類</option>
                 </select>
               </div>
 
@@ -225,7 +239,7 @@
           </form>
         </div>
 
-        <!-- 右側：領用區物資清單 (直接填寫數字並提交確認) -->
+        <!-- 右側：領用區物資清單 -->
         <div class="lg:col-span-8 flex flex-col space-y-3">
           <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex-1 flex flex-col">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2 mb-3">
@@ -234,14 +248,13 @@
                   <span>⚡</span>
                   領用區清單（可直接填寫數字登記）
                 </h3>
-                <p class="text-xs text-slate-500">可在各品項直接輸入登記數量，送出前會有一次完整核對視窗，防呆不漏失！</p>
+                <p class="text-xs text-slate-500">可在各品項直接輸入登記數量，送出前會有一次完整核對視窗。</p>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">支援送出前確認</span>
               </div>
             </div>
 
-            <!-- 即時分類過濾與搜尋 -->
             <div class="flex flex-wrap items-center gap-2 mb-3">
               <input type="text" id="quickListSearch" oninput="renderQuickPickupCardList()" placeholder="🔍 快速搜尋品項名稱..." class="flex-1 min-w-[150px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500">
               <select id="quickListCategoryFilter" onchange="renderQuickPickupCardList()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-semibold outline-none focus:ring-2 focus:ring-teal-500">
@@ -254,7 +267,6 @@
               </select>
             </div>
 
-            <!-- 品項現況清單 (填寫數字登記) -->
             <div id="quickPickupContainer" class="custom-scroll space-y-2.5 max-h-[620px] overflow-y-auto pr-1 flex-1">
             </div>
           </div>
@@ -262,8 +274,8 @@
       </div>
     </section>
 
+    <!-- 視角 2: 後台庫存與校正 -->
     <section id="viewAdmin" class="hidden space-y-6">
-      <!-- 統計四巨頭看板 -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div class="flex items-center justify-between">
@@ -302,7 +314,6 @@
         </div>
       </div>
 
-      <!-- 後台操作列與活動篩選器 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -314,14 +325,12 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2.5">
-            <!-- 活動檢視篩選器 -->
             <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
               <span class="text-xs font-bold text-slate-500 pl-2">檢視範圍：</span>
               <select id="adminEventFilter" onchange="renderAdminTable()" class="bg-white border-0 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 shadow-xs outline-none">
               </select>
             </div>
 
-            <!-- 調度按鈕與新增品項 -->
             <button onclick="openStockTransferModal()" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
               <span>🔄 調度撥補 / 進貨入庫</span>
             </button>
@@ -395,8 +404,8 @@
       </div>
     </section>
 
+    <!-- 視角 3: 各單位領還對帳 -->
     <section id="viewUnits" class="hidden space-y-6">
-      <!-- 頂部統計指標 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div class="flex items-center justify-between">
@@ -435,7 +444,6 @@
         </div>
       </div>
 
-      <!-- 單位結算操作與篩選工具列 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -447,14 +455,12 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2.5">
-            <!-- 活動篩選 -->
             <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
               <span class="text-xs font-bold text-slate-500 pl-2">活動專案：</span>
               <select id="unitEventFilter" onchange="renderUnitSettlementView()" class="bg-white border-0 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 shadow-xs outline-none">
               </select>
             </div>
 
-            <!-- 單位搜尋 -->
             <input type="text" id="unitSearchInput" oninput="renderUnitSettlementView()" placeholder="🔍 搜尋單位名稱或人員..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500">
 
             <button onclick="exportUnitReportCSV()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
@@ -463,12 +469,12 @@
           </div>
         </div>
 
-        <!-- 單位對帳卡片容器 -->
         <div id="unitSettlementContainer" class="space-y-4 pt-2">
         </div>
       </div>
     </section>
 
+    <!-- 視角 4: 流水帳 -->
     <section id="viewLogs" class="hidden space-y-6">
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -572,7 +578,7 @@
     </div>
   </div>
 
-  <!-- 庫存調度彈窗 (支援進貨入庫) -->
+  <!-- 庫存調度彈窗 -->
   <div id="transferModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
@@ -611,49 +617,6 @@
         <div class="flex justify-end gap-2.5 pt-2">
           <button type="button" onclick="closeModal('transferModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
           <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs">確認調度撥補</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- 單位批次歸還 / 剩餘結算彈窗 -->
-  <div id="unitReturnModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 fade-enter max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-        <div>
-          <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-            <span>📦</span> 單位物資歸還與剩餘結算
-          </h3>
-          <p class="text-[11px] text-slate-400">登記該單位歸還/退回物資，系統將自動核銷並計算耗損剩餘</p>
-        </div>
-        <button onclick="closeModal('unitReturnModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-      </div>
-
-      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-3 space-y-1">
-        <div class="flex justify-between"><span class="text-slate-500">借領單位：</span><span id="returnModalUnit" class="font-black text-amber-800">--</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">活動專案：</span><span id="returnModalEvent" class="font-bold text-slate-800">--</span></div>
-      </div>
-
-      <form id="unitReturnForm" onsubmit="handleUnitReturnSubmit(event)" class="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scroll">
-        <div class="space-y-2">
-          <label class="block font-bold text-slate-700">歸還品項與數量確認 *</label>
-          <div id="unitReturnItemsList" class="space-y-2">
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">歸還點收人 / 經手人員 *</label>
-          <input type="text" id="unitReturnHandler" required placeholder="例：林防護師 (點收核對)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">結算備註說明</label>
-          <input type="text" id="unitReturnNote" placeholder="例：賽事結束全數繳回、部分耗材已消耗完畢" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
-        </div>
-
-        <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('unitReturnModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
-          <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs">確認點收結算入庫</button>
         </div>
       </form>
     </div>
@@ -746,67 +709,7 @@
     </div>
   </div>
 
-  <!-- 庫存盤點與數量校正彈窗 -->
-  <div id="adjustStockModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-          <span>📝</span> 庫存盤點與數量校正
-        </h3>
-        <button onclick="closeModal('adjustStockModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-      </div>
-
-      <form onsubmit="handleAdjustStockSubmit(event)" class="space-y-4 text-xs">
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">目標專案活動 (欲校正的活動) *</label>
-            <select id="adjustEventSelect" onchange="onAdjustEventChanged()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-teal-500">
-              <!-- 動態載入各活動 -->
-            </select>
-          </div>
-          <div class="flex justify-between items-center pt-1 border-t border-slate-200">
-            <span class="text-slate-500">校製品項：</span>
-            <span id="adjustModalItemName" class="font-black text-teal-800 text-xs">--</span>
-          </div>
-        </div>
-
-        <input type="hidden" id="adjustItemId">
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-bold text-indigo-800 mb-1">🏬 後台庫存倉數量</label>
-            <input type="number" id="adjustWarehouseQty" min="0" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-indigo-700 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-teal-800 mb-1">🏷️ 現場領用區現貨</label>
-            <input type="number" id="adjustPickupQty" min="0" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-teal-700 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">校正原因 / 備註說明 *</label>
-          <select id="adjustReasonQuick" onchange="applyAdjustReason(this.value)" class="w-full mb-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-semibold outline-none">
-            <option value="先前輸入錯誤，調整更正">✏️ 先前輸入錯誤，調整更正</option>
-            <option value="現場實體盤點，校正盤虧/盤盈">📋 現場實體盤點，校正盤虧/盤盈</option>
-            <option value="破損損壞/過期報廢核減">🗑️ 破損損壞/過期報廢核減</option>
-            <option value="其他自訂說明">💬 其他原因 (請於下方輸入)</option>
-          </select>
-          <input type="text" id="adjustNoteInput" required placeholder="請說明調整原因..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
-        </div>
-
-        <div class="text-[11px] text-slate-500 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
-          💡 <strong>即時修正生效：</strong>儲存後將直接覆蓋該活動的存量，後台看板與庫存總表將立即更新，並於流水帳留下記錄供稽核。
-        </div>
-
-        <div class="flex justify-end gap-2.5 pt-2">
-          <button type="button" onclick="closeModal('adjustStockModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">取消</button>
-          <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-xs">確認儲存更新</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- 雲端同步中心彈窗 (可定時自動拉取前線所有手機的登記) -->
+  <!-- 雲端同步中心彈窗 -->
   <div id="cloudCenterModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
@@ -818,52 +721,28 @@
 
       <div class="space-y-4 text-xs">
         <div class="p-3 bg-teal-50 rounded-xl border border-teal-200 text-teal-900 leading-relaxed">
-          💡 <strong>跨手機即時同步總管中心：</strong><br>
-          貼上已部署的 Google Apps Script Web App API 網址，系統將自動定時拉取各哨點手機送出的最新領還資料，並即時更新至後台看板與對帳單。
+          💡 <strong>極速即時連動模式：</strong><br>
+          系統已內建防快取穿透引擎，手機一送出，總表最快 <strong>3 ~ 5 秒內自動即時跳動</strong>，並自動扣減現場庫存與更新對帳單。
         </div>
 
         <div>
           <label class="block font-bold text-slate-700 mb-1">Google Apps Script Web App API 網址</label>
           <input type="url" id="adminCloudApiUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 font-mono text-[11px]">
-          <p id="cloudUrlHint" class="text-[11px] text-slate-400 mt-1">格式必須為：https://script.google.com/macros/s/.../exec</p>
-        </div>
-
-        <!-- 診斷與測試工具列 -->
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-amber-900">連線診斷工具</span>
-            <div class="flex gap-1.5">
-              <button type="button" onclick="diagnoseCloudConnection()" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
-                <span>🔍 檢測連線問題</span>
-              </button>
-              <button type="button" onclick="testCloudUrlInBrowser()" class="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
-                <span>🔗 在新分頁打開</span>
-              </button>
-            </div>
-          </div>
-          <div id="cloudDiagnosticResult" class="text-[11px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-200 hidden leading-relaxed font-mono break-all"></div>
-          <div class="text-[11px] text-amber-900 leading-relaxed space-y-1">
-            <p>💡 <strong>為什麼會顯示 Failed to fetch？通常是以下 2 個原因：</strong></p>
-            <ol class="list-decimal pl-4 space-y-0.5 text-[10px] text-amber-800">
-              <li><strong>權限選錯</strong>：在 Apps Script 部署時，必須選<strong>「所有人 (Anyone)」</strong>，不能選「具備 Google 帳號的任何人」。</li>
-              <li><strong>學校/公司網域限制</strong>：若使用學校（@edu.tw）或公司帳號，Google 政策會禁止對外公開，請改用<strong>個人一般 @gmail.com</strong> 帳號建立試算表。</li>
-            </ol>
-          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">自動輪詢間隔</label>
-            <select id="adminAutoSyncInterval" onchange="startAutoSyncPolling()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 outline-none focus:ring-2 focus:ring-teal-500">
-              <option value="10000">⚡ 每 10 秒</option>
-              <option value="15000" selected>⏱️ 每 15 秒</option>
-              <option value="30000">⏳ 每 30 秒</option>
-              <option value="60000">🕒 每 1 分鐘</option>
+            <label class="block font-bold text-slate-700 mb-1">自動監控頻率</label>
+            <select id="adminAutoSyncInterval" onchange="startAutoSyncPolling()" class="w-full bg-teal-50 border border-teal-300 rounded-xl px-2.5 py-2 outline-none font-bold text-teal-900 focus:ring-2 focus:ring-teal-500">
+              <option value="3000">⚡ 極速 3 秒 (隨隊現場必備)</option>
+              <option value="5000" selected>⚡ 即時 5 秒 (推薦模式)</option>
+              <option value="10000">⏱️ 每 10 秒</option>
+              <option value="20000">⏳ 每 20 秒</option>
               <option value="0">🚫 關閉自動輪詢</option>
             </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">最後同步狀態</label>
+            <label class="block font-bold text-slate-700 mb-1">最後連線狀態</label>
             <div class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-600 font-mono text-[11px] truncate">
               <span id="lastCloudSyncTime">尚未同步</span>
             </div>
@@ -871,8 +750,8 @@
         </div>
 
         <div class="flex gap-2 pt-1">
-          <button type="button" onclick="manualPullFromCloud()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-2xs">
-            <span>🔄 立即手動同步一次</span>
+          <button type="button" onclick="manualPullFromCloud(false)" class="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
+            <span>⚡ 立即手動同步 (強制穿透抓取)</span>
           </button>
         </div>
       </div>
@@ -881,8 +760,8 @@
         <button type="button" onclick="closeModal('cloudCenterModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">
           關閉
         </button>
-        <button type="button" onclick="saveAdminCloudSettings()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-xs transition">
-          儲存連線設定
+        <button type="button" onclick="saveAdminCloudSettings()" class="px-5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-xs transition">
+          儲存設定
         </button>
       </div>
     </div>
@@ -891,40 +770,35 @@
   <!-- 手機掃碼 QR Code 分享彈窗 -->
   <div id="qrShareModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 fade-enter text-center">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
         <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
           <span>📱</span> 現場手機掃碼填寫
         </h3>
         <button onclick="closeModal('qrShareModal')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
       </div>
 
-      <div class="space-y-4 text-xs">
-        <p class="text-slate-500 text-[11px] leading-relaxed">
-          現場防護員、隊醫或哨點志工，只要以手機開啟相機掃描下方 QR Code，即可直接進入專屬的<strong>現場物資領用登記站</strong>填寫！
-        </p>
+      <div class="space-y-3 text-xs">
+        <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-[11px] text-left leading-relaxed">
+          ✨ <strong>已自動帶入連線金鑰：</strong><br>
+          現場防護員手機掃碼開啟後<strong>完全免設定</strong>，直接填寫就能立即把資料送進 Google 試算表與總表！
+        </div>
 
-        <!-- QR Code 動態圖片容器 -->
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block shadow-inner">
-          <img id="qrCodeImgDisplay" src="" alt="現場領用 QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-xs">
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 inline-block shadow-inner">
+          <img id="qrCodeImgDisplay" src="" alt="現場領用 QR Code" class="w-44 h-44 mx-auto rounded-lg shadow-xs">
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1 text-left">領用站專屬網址 (可直接點擊複製)</label>
+          <label class="block font-bold text-slate-700 mb-1 text-left">領用站專屬網址</label>
           <div class="flex gap-1.5">
-            <input type="text" id="portalShareUrlInput" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono text-[11px] text-slate-700 outline-none">
+            <input type="text" id="portalShareUrlInput" oninput="updateQrCodeFromInput()" placeholder="https://..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono text-[11px] text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
             <button onclick="copyPortalUrl()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shrink-0 transition">
               複製
             </button>
           </div>
         </div>
-
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] text-left leading-relaxed">
-          💡 <strong>如何發布讓大家的網路都能掃到？</strong><br>
-          只要將 <code class="bg-amber-100 px-1 rounded font-bold">sports_pickup_portal.html</code> 上傳至 <strong>GitHub Pages</strong>、<strong>Netlify</strong> 或公司內部主機，再將網址貼入上方欄位即可自動生成正式 QR Code！
-        </div>
       </div>
 
-      <div class="pt-4 mt-2 border-t border-slate-100">
+      <div class="pt-3 mt-2 border-t border-slate-100">
         <button type="button" onclick="closeModal('qrShareModal')" class="w-full py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-xs transition">
           關閉視窗
         </button>
@@ -936,9 +810,7 @@
   <div id="toastNotificationBox" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <script>
-    /* 1. 系統預設品項資料庫 (依指示分類) */
     const DEFAULT_MASTER_ITEMS = [
-      // --- 耗材貼布類 ---
       { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 80, defaultPk: 20 },
       { id: "T02", name: "運動貼布-1.5 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 120, defaultPk: 32 },
       { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 50, defaultPk: 16 },
@@ -953,8 +825,6 @@
       { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "耗材貼布類", isEquipment: false, unit: "片", defaultWh: 30, defaultPk: 10 },
       { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "耗材貼布類", isEquipment: false, unit: "片", defaultWh: 30, defaultPk: 10 },
       { id: "E09", name: "4 吋加長型彈繃", category: "耗材貼布類", isEquipment: false, unit: "卷", defaultWh: 35, defaultPk: 12 },
-
-      // --- 耗材外傷類 ---
       { id: "W01", name: "水泡護墊(2nd Skin)", category: "耗材外傷類", isEquipment: false, unit: "片", defaultWh: 50, defaultPk: 15 },
       { id: "W02", name: "鼻血止血棉棒", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 15, defaultPk: 5 },
       { id: "W03", name: "酒精棉片", category: "耗材外傷類", isEquipment: false, unit: "盒", defaultWh: 25, defaultPk: 8 },
@@ -970,8 +840,6 @@
       { id: "O01", name: "冰敷用塑膠袋", category: "耗材其他類", isEquipment: false, unit: "包", defaultWh: 40, defaultPk: 15 },
       { id: "O02", name: "冰敷膠膜", category: "耗材其他類", isEquipment: false, unit: "卷", defaultWh: 18, defaultPk: 6 },
       { id: "O03", name: "熱身用運動軟膏", category: "耗材其他類", isEquipment: false, unit: "瓶", defaultWh: 20, defaultPk: 5 },
-
-      // --- 非耗材類 ---
       { id: "E01", name: "防護包", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 4, defaultPk: 6 },
       { id: "E02", name: "冰桶-大", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 2, defaultPk: 3 },
       { id: "E03", name: "冰桶-中", category: "非耗材類", isEquipment: true, unit: "個", defaultWh: 2, defaultPk: 4 },
@@ -982,7 +850,6 @@
       { id: "E08", name: "肢體固定三角巾", category: "非耗材類", isEquipment: true, unit: "條", defaultWh: 15, defaultPk: 12 }
     ];
 
-    /* 2. 活動專案清單與狀態定義 */
     let eventsList = [
       { id: "EV_MIAOLI", name: "苗栗計畫隨隊", note: "偏鄉及國中體育團隊防護隨隊" },
       { id: "EV_TAOYUAN", name: "桃園計畫隨隊", note: "高中重點專項運動訓練隨隊防護" }
@@ -1073,10 +940,6 @@
       filterFormItems();
       renderQuickPickupCardList();
       onItemSelectionChanged();
-    }
-
-    function onFormCategoryChanged() {
-      filterFormItems();
     }
 
     function filterFormItems() {
@@ -1528,9 +1391,6 @@
                 <button onclick="openStockTransferModal('${item.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200 transition">
                   調度
                 </button>
-                <button onclick="openAdjustStockModal('${item.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition">
-                  校正
-                </button>
               </div>
             </td>
           </tr>
@@ -1808,9 +1668,6 @@
                   ? `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black">結算完畢 • 無欠設備</span>`
                   : `<span class="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black animate-pulse">有 ${unreturnedCountInUnit} 件器材未還</span>`
                 }
-                <button onclick="openUnitReturnModal('${u.key}')" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1">
-                  <span>🔄 批次歸還/剩餘退回結算</span>
-                </button>
               </div>
             </div>
 
@@ -1831,147 +1688,9 @@
                 </tbody>
               </table>
             </div>
-
-            <div class="p-2.5 bg-slate-50 rounded-xl flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
-              <div class="flex items-center gap-4">
-                <span>📦 耗材總領出：<strong>${itemsArr.filter(i => !i.isEquipment).reduce((s, i) => s + i.checkoutQty, 0)}</strong></span>
-                <span>🔥 實質消耗：<strong class="text-slate-800">${unitTotalConsumed}</strong></span>
-                <span>↩️ 剩餘退回領用區：<strong class="text-emerald-700">${unitTotalReturned}</strong></span>
-              </div>
-              <div class="text-slate-400 italic">💡 器材點交歸還後，領用區存量將自動補齊；未用完耗材退回將自動減少消耗統計。</div>
-            </div>
           </div>
         `;
       }).join('');
-    }
-
-    let activeSettlingUnitKey = null;
-
-    function openUnitReturnModal(unitKey) {
-      activeSettlingUnitKey = unitKey;
-      const [eventId, unitName] = unitKey.split('___');
-      const ev = eventsList.find(e => e.id === eventId);
-
-      document.getElementById('returnModalUnit').innerText = unitName;
-      document.getElementById('returnModalEvent').innerText = ev ? ev.name : '全部活動';
-      document.getElementById('unitReturnHandler').value = document.getElementById('quickStaffUser')?.value || '現場防護點收員';
-
-      const unitItems = {};
-      transactionLogs.forEach(l => {
-        if (l.eventId === eventId && (l.unit || '未指定組別') === unitName) {
-          if (!unitItems[l.itemId]) {
-            unitItems[l.itemId] = {
-              itemId: l.itemId,
-              itemName: l.itemName,
-              isEquipment: l.isEquipment,
-              unitName: l.unitName || '件',
-              checkoutQty: 0,
-              returnQty: 0
-            };
-          }
-          if (l.actionType === 'checkout') unitItems[l.itemId].checkoutQty += l.qty;
-          if (l.actionType === 'return') unitItems[l.itemId].returnQty += l.qty;
-        }
-      });
-
-      const container = document.getElementById('unitReturnItemsList');
-      const itemsList = Object.values(unitItems);
-
-      if (itemsList.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-slate-400">該單位目前無任何領借紀錄</div>`;
-      } else {
-        container.innerHTML = itemsList.map(it => {
-          const isEquip = it.isEquipment;
-          const owing = Math.max(0, it.checkoutQty - it.returnQty);
-
-          return `
-            <div class="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${isEquip ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
-                    ${isEquip ? '器材' : '耗材'}
-                  </span>
-                  <span class="font-bold text-slate-900">${it.itemName}</span>
-                </div>
-                <div class="text-[11px] text-slate-400 mt-0.5">
-                  原借出: ${it.checkoutQty} • 已還/退: ${it.returnQty} • <strong class="${isEquip ? (owing > 0 ? 'text-rose-600' : 'text-emerald-600') : 'text-slate-600'}">目前手上剩餘/借用中: ${owing} ${it.unitName}</strong>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-1.5 shrink-0">
-                <span class="text-xs text-slate-500 font-medium">本次繳回:</span>
-                <input type="number" id="unitReturnInput_${it.itemId}" min="0" max="${owing > 0 ? owing : 999}" value="${owing > 0 ? owing : 0}" class="w-16 bg-slate-50 border border-slate-300 rounded-lg py-1 px-2 text-center text-xs font-black outline-none focus:ring-1 focus:ring-teal-500">
-                <span class="text-xs text-slate-400">${it.unitName}</span>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      document.getElementById('unitReturnModal').classList.remove('hidden');
-    }
-
-    function handleUnitReturnSubmit(e) {
-      e.preventDefault();
-      if (!activeSettlingUnitKey) return;
-
-      const [eventId, unitName] = activeSettlingUnitKey.split('___');
-      const ev = eventsList.find(e => e.id === eventId);
-      const handler = document.getElementById('unitReturnHandler').value.trim() || '點收人員';
-      const note = document.getElementById('unitReturnNote').value.trim() || '單位賽後結算歸還';
-
-      let returnCount = 0;
-
-      DEFAULT_MASTER_ITEMS.forEach(it => {
-        const input = document.getElementById(`unitReturnInput_${it.id}`);
-        if (input) {
-          const qty = parseInt(input.value, 10);
-          if (qty && qty > 0) {
-            returnCount++;
-            const stock = eventStockData[eventId]?.[it.id];
-            if (stock) {
-              stock.pickupQty += qty;
-              if (it.isEquipment) {
-                stock.borrowedQty = Math.max(0, stock.borrowedQty - qty);
-              } else {
-                stock.consumedQty = Math.max(0, (stock.consumedQty || 0) - qty);
-              }
-            }
-
-            transactionLogs.unshift({
-              id: 'LOG_' + Date.now() + '_' + it.id,
-              time: new Date().toLocaleString('zh-TW', { hour12: false }),
-              eventId: eventId,
-              eventName: ev ? ev.name : '活動專案',
-              unit: unitName,
-              user: `${handler} (點收歸還)`,
-              actionType: 'return',
-              isEquipment: it.isEquipment,
-              itemId: it.id,
-              itemName: it.name,
-              qty: qty,
-              unitName: it.unit,
-              note: `[單位結算] ${note}`
-            });
-          }
-        }
-      });
-
-      if (returnCount === 0) {
-        showToast('未填寫任何歸還數量！', 'error');
-        return;
-      }
-
-      saveDataToStorage();
-      closeModal('unitReturnModal');
-      showToast(`已成功為「${unitName}」完成批次歸還與剩餘物資結算！`, 'success');
-
-      refreshStaffView();
-      renderAdminDashboardStats();
-      renderAdminTable();
-      renderUnreturnedEquipmentTable();
-      renderUnitSettlementView();
-      renderLogsTable();
     }
 
     function exportUnitReportCSV() {
@@ -2109,100 +1828,6 @@
       renderLogsTable();
     }
 
-    function openAdjustStockModal(itemId) {
-      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
-      if (!item) return;
-
-      const filterVal = document.getElementById('adminEventFilter')?.value || 'ALL';
-      const targetEventId = filterVal === 'ALL' ? currentActiveEventId : filterVal;
-
-      const evSelect = document.getElementById('adjustEventSelect');
-      evSelect.innerHTML = eventsList.map(e => `<option value="${e.id}" ${e.id === targetEventId ? 'selected' : ''}>${e.name}</option>`).join('');
-
-      document.getElementById('adjustModalItemName').innerText = `${item.name} (${item.unit})`;
-      document.getElementById('adjustItemId').value = itemId;
-      document.getElementById('adjustNoteInput').value = "先前輸入錯誤，調整更正";
-
-      loadAdjustValuesForEvent(evSelect.value, itemId);
-      document.getElementById('adjustStockModal').classList.remove('hidden');
-    }
-
-    function onAdjustEventChanged() {
-      const eventId = document.getElementById('adjustEventSelect').value;
-      const itemId = document.getElementById('adjustItemId').value;
-      loadAdjustValuesForEvent(eventId, itemId);
-    }
-
-    function loadAdjustValuesForEvent(eventId, itemId) {
-      const stock = eventStockData[eventId]?.[itemId] || { warehouseQty: 0, pickupQty: 0 };
-      document.getElementById('adjustWarehouseQty').value = stock.warehouseQty;
-      document.getElementById('adjustPickupQty').value = stock.pickupQty;
-    }
-
-    function applyAdjustReason(val) {
-      if (val !== '其他自訂說明') {
-        document.getElementById('adjustNoteInput').value = val;
-      } else {
-        document.getElementById('adjustNoteInput').value = '';
-        document.getElementById('adjustNoteInput').focus();
-      }
-    }
-
-    function handleAdjustStockSubmit(e) {
-      e.preventDefault();
-      const eventId = document.getElementById('adjustEventSelect').value;
-      const itemId = document.getElementById('adjustItemId').value;
-      const newWh = parseInt(document.getElementById('adjustWarehouseQty').value, 10);
-      const newPk = parseInt(document.getElementById('adjustPickupQty').value, 10);
-      const note = document.getElementById('adjustNoteInput').value.trim();
-
-      const item = DEFAULT_MASTER_ITEMS.find(i => i.id === itemId);
-      const ev = eventsList.find(e => e.id === eventId);
-
-      if (!item || isNaN(newWh) || isNaN(newPk) || newWh < 0 || newPk < 0 || !ev) {
-        showToast('請輸入有效的庫存數量！', 'error');
-        return;
-      }
-
-      if (!eventStockData[eventId]) eventStockData[eventId] = {};
-      if (!eventStockData[eventId][itemId]) {
-        eventStockData[eventId][itemId] = { warehouseQty: 0, pickupQty: 0, borrowedQty: 0, consumedQty: 0 };
-      }
-
-      const stock = eventStockData[eventId][itemId];
-      const prevWh = stock.warehouseQty;
-      const prevPk = stock.pickupQty;
-
-      stock.warehouseQty = newWh;
-      stock.pickupQty = newPk;
-
-      transactionLogs.unshift({
-        id: 'LOG_' + Date.now(),
-        time: new Date().toLocaleString('zh-TW', { hour12: false }),
-        eventId: eventId,
-        eventName: ev.name,
-        unit: '管理後台校正',
-        user: '系統管理員',
-        actionType: 'adjust',
-        isEquipment: item.isEquipment,
-        itemId: item.id,
-        itemName: item.name,
-        qty: Math.abs(newWh - prevWh) + Math.abs(newPk - prevPk),
-        unitName: item.unit,
-        note: `[盤點校正] 庫存倉:${prevWh}➔${newWh}, 領用區:${prevPk}➔${newPk}。原因: ${note}`
-      });
-
-      saveDataToStorage();
-      closeModal('adjustStockModal');
-      showToast(`已成功將「${ev.name}」的「${item.name}」大倉更新為 ${newWh} ${item.unit}！`, 'success');
-
-      refreshStaffView();
-      renderAdminDashboardStats();
-      renderAdminTable();
-      renderLogsTable();
-      renderUnitSettlementView();
-    }
-
     function openCustomEventModal() {
       document.getElementById('customEventModal').classList.remove('hidden');
     }
@@ -2311,7 +1936,6 @@
       tbody.innerHTML = filtered.map(log => {
         const isOut = log.actionType === 'checkout';
         const isInbound = log.actionType === 'inbound';
-        const isAdjust = log.actionType === 'adjust';
         
         let typeBadge = '';
         let qtyClass = 'text-amber-700';
@@ -2327,10 +1951,6 @@
           typeBadge = '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800">📥 進貨入庫</span>';
           qtyClass = 'text-indigo-700';
           qtyPrefix = '+';
-        } else if (isAdjust) {
-          typeBadge = '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-800">✏️ 盤點校正</span>';
-          qtyClass = 'text-slate-700';
-          qtyPrefix = '±';
         } else {
           typeBadge = log.isEquipment
             ? '<span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">🔄 器材歸還</span>'
@@ -2371,7 +1991,6 @@
         let typeStr = '未使用退回/歸還';
         if (l.actionType === 'checkout') typeStr = l.isEquipment ? '器材借出' : '耗材領出消耗';
         else if (l.actionType === 'inbound') typeStr = '進貨入庫';
-        else if (l.actionType === 'adjust') typeStr = '數量校正';
 
         const natureStr = l.isEquipment ? '非耗材器材' : '防護耗材';
         csv += `"${l.time}","${l.eventName}","${l.unit || '未指定組別'}","${l.user}","${typeStr}","${natureStr}","${l.itemName}","${l.qty}","${l.unitName || l.unit || '件'}","${l.note || ''}"\n`;
@@ -2387,38 +2006,6 @@
       document.body.removeChild(link);
       showToast("已成功匯出 CSV 檔案！", "success");
     }
-
-    const SYNC_CHANNEL_NAME = "SPORTS_MED_INVENTORY_SYNC_CHANNEL";
-    let syncChannel = null;
-
-    try {
-      syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
-      syncChannel.onmessage = (event) => {
-        if (event.data && event.data.type === 'DATA_UPDATED') {
-          loadDataFromStorage();
-          refreshStaffView();
-          renderAdminDashboardStats();
-          renderAdminTable();
-          renderUnreturnedEquipmentTable();
-          renderUnitSettlementView();
-          renderLogsTable();
-        }
-      };
-    } catch (err) {
-      console.warn("BroadcastChannel not supported.");
-    }
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'SPORTS_MED_STOCK_DATA' || e.key === 'SPORTS_MED_LOGS') {
-        loadDataFromStorage();
-        refreshStaffView();
-        renderAdminDashboardStats();
-        renderAdminTable();
-        renderUnreturnedEquipmentTable();
-        renderUnitSettlementView();
-        renderLogsTable();
-      }
-    });
 
     function loadDataFromStorage() {
       const savedStocks = localStorage.getItem('SPORTS_MED_STOCK_DATA');
@@ -2447,10 +2034,6 @@
       localStorage.setItem('SPORTS_MED_STOCK_DATA', JSON.stringify(eventStockData));
       localStorage.setItem('SPORTS_MED_LOGS', JSON.stringify(transactionLogs));
       localStorage.setItem('SPORTS_MED_EVENTS', JSON.stringify(eventsList));
-
-      if (syncChannel) {
-        syncChannel.postMessage({ type: 'DATA_UPDATED', timestamp: Date.now() });
-      }
     }
 
     function initializeStockData() {
@@ -2467,59 +2050,12 @@
           eventStockData[ev.id][item.id] = {
             warehouseQty: Math.round(item.defaultWh * factor),
             pickupQty: Math.round(item.defaultPk * factor),
-            borrowedQty: item.isEquipment ? (evIdx === 0 ? 1 : 0) : 0,
-            consumedQty: item.isEquipment ? 0 : 0
+            borrowedQty: 0,
+            consumedQty: 0
           };
         });
       });
 
-      transactionLogs.push(
-        {
-          id: "L1",
-          time: new Date(Date.now() - 3600000 * 4).toLocaleString('zh-TW', { hour12: false }),
-          eventId: "EV_MIAOLI",
-          eventName: "苗栗計畫隨隊",
-          unit: "田徑競賽組",
-          user: "王防護師",
-          actionType: "checkout",
-          isEquipment: false,
-          itemId: "T02",
-          itemName: "運動貼布-1.5 吋寬",
-          qty: 6,
-          unitName: "卷",
-          note: "預防性踝關節貼紮"
-        },
-        {
-          id: "L2",
-          time: new Date(Date.now() - 3600000 * 3).toLocaleString('zh-TW', { hour12: false }),
-          eventId: "EV_MIAOLI",
-          eventName: "苗栗計畫隨隊",
-          unit: "田徑競賽組",
-          user: "王防護師",
-          actionType: "return",
-          isEquipment: false,
-          itemId: "T02",
-          itemName: "運動貼布-1.5 吋寬",
-          qty: 2,
-          unitName: "卷",
-          note: "賽程結束，剩餘未用完2卷退回"
-        },
-        {
-          id: "L3",
-          time: new Date(Date.now() - 3600000 * 2).toLocaleString('zh-TW', { hour12: false }),
-          eventId: "EV_MIAOLI",
-          eventName: "苗栗計畫隨隊",
-          unit: "球場機動第一哨點",
-          user: "張助理",
-          actionType: "checkout",
-          isEquipment: true,
-          itemId: "E01",
-          itemName: "防護包",
-          qty: 1,
-          unitName: "個",
-          note: "巡場公用急救包"
-        }
-      );
       saveDataToStorage();
     }
 
@@ -2549,78 +2085,11 @@
       }, 3500);
     }
 
-    /* 雲端自動同步與定時拉取引擎 */
     let adminCloudApi = localStorage.getItem('SPORTS_MED_ADMIN_CLOUD_API') || '';
     let autoSyncTimer = null;
+    let isFetchingCloud = false;
 
-    function testCloudUrlInBrowser() {
-      const url = document.getElementById('adminCloudApiUrl')?.value.trim() || adminCloudApi;
-      if (!url) {
-        showToast('請先貼入 API 網址！', 'error');
-        return;
-      }
-      window.open(url, '_blank');
-    }
-
-    async function diagnoseCloudConnection() {
-      const url = document.getElementById('adminCloudApiUrl')?.value.trim() || adminCloudApi;
-      const box = document.getElementById('cloudDiagnosticResult');
-      if (!box) return;
-
-      if (!url) {
-        box.classList.remove('hidden');
-        box.innerHTML = '❌ <strong>錯誤：</strong>尚未輸入 API 網址！請貼上以 /exec 結尾的網址。';
-        return;
-      }
-
-      box.classList.remove('hidden');
-      box.className = "text-[11px] text-slate-800 bg-white/90 p-2.5 rounded-lg border border-slate-300 leading-relaxed font-mono break-all";
-      box.innerHTML = '⏳ 正在連線測試 Google 雲端 API (同時嘗試 Fetch 與 JSONP)...';
-
-      // 1. 先用 JSONP 測試（可突破 CORS 與 file:/// 限制）
-      try {
-        const jsonpData = await fetchViaJsonp(url, 6000);
-        if (jsonpData && jsonpData.status === 'success') {
-          box.innerHTML = `✅ <strong>連線大成功！</strong> (JSONP 通道暢通)<br>Google 雲端已正確回傳資料，目前線上共有 <strong>${(jsonpData.data || []).length}</strong> 筆登記資料。`;
-          box.className = "text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-lg border border-emerald-300 leading-relaxed";
-          applyCloudLogs(jsonpData.data);
-          return;
-        }
-      } catch(e) {
-        console.warn("JSONP attempt finished with notice, trying standard fetch...", e);
-      }
-
-      // 2. 若 JSONP 未回傳，再用標準 fetch 檢測
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        
-        let json = null;
-        try { json = JSON.parse(text); } catch(e) {}
-
-        if (json && json.status === 'success') {
-          box.innerHTML = `✅ <strong>連線大成功！</strong><br>Google 雲端已正確回傳資料，目前線上共有 <strong>${(json.data || []).length}</strong> 筆登記資料。`;
-          box.className = "text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-lg border border-emerald-300 leading-relaxed";
-          applyCloudLogs(json.data);
-        } else if (text.includes('accounts.google.com') || text.includes('Sign in')) {
-          box.innerHTML = '⚠️ <strong>權限被阻擋：Google 要求登入！</strong><br>請回到 Apps Script 的「管理部署」➔ 編輯 ➔ 將「誰可以存取」改成<strong>「所有人 (Anyone)」</strong>，不能選「具備 Google 帳號的任何人」。';
-          box.className = "text-[11px] text-rose-900 bg-rose-50 p-2.5 rounded-lg border border-rose-300 leading-relaxed";
-        } else {
-          box.innerHTML = `⚠️ <strong>回傳內容不是預期格式：</strong><br>${text.slice(0, 120)}...<br>請確認 Apps Script 內有完整貼上 <code>doGet</code> 程式碼並建立「新版本」部署。`;
-          box.className = "text-[11px] text-amber-900 bg-amber-50 p-2.5 rounded-lg border border-amber-300 leading-relaxed";
-        }
-      } catch(err) {
-        box.innerHTML = `❌ <strong>連線遭阻擋 (Failed to fetch)</strong><br><br>` +
-          `👉 <strong>請點擊上方按鈕「🔗 在新分頁打開」查看：</strong><br>` +
-          `1. 若新分頁跳出「<strong>要求登入</strong>」：權限未設為「所有人 (Anyone)」。<br>` +
-          `2. 若使用<strong>學校/公司帳號</strong>：Google Workspace 網域會封鎖對外開放，請改用<strong>個人 @gmail.com</strong> 帳號建立試算表。<br>` +
-          `3. 若在新分頁看得到 <code>{"status":"success"...}</code>：請確保您的 Apps Script 中的 <code>doGet</code> 有加入 <code>callback</code> 支援！`;
-        box.className = "text-[11px] text-rose-900 bg-rose-50 p-2.5 rounded-lg border border-rose-300 leading-relaxed";
-      }
-    }
-
-    // JSONP 通道（專門解決本機 file:/// 與瀏覽器 CORS 擋截）
-    function fetchViaJsonp(url, timeoutMs = 7000) {
+    function fetchViaJsonp(url, timeoutMs = 6000) {
       return new Promise((resolve, reject) => {
         const callbackName = 'sports_med_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
         const script = document.createElement('script');
@@ -2641,7 +2110,7 @@
           resolve(data);
         };
 
-        script.src = `${url}${sep}callback=${callbackName}`;
+        script.src = `${url}${sep}callback=${callbackName}&_nocache=${Date.now()}`;
         script.onerror = function() {
           cleanup();
           reject(new Error('JSONP script load error'));
@@ -2655,35 +2124,72 @@
       const timeLabel = document.getElementById('lastCloudSyncTime');
       if (timeLabel) timeLabel.innerText = new Date().toLocaleTimeString('zh-TW');
 
-      let addedCount = 0;
+      let newlyAddedLogs = [];
+
       cloudLogs.forEach(cLog => {
         const exists = transactionLogs.some(local => 
           local.time === cLog.time && 
           local.user === cLog.user && 
           local.itemName === cLog.itemName &&
-          local.qty == cLog.qty
+          Number(local.qty) === Number(cLog.qty)
         );
-        if (!exists) {
-          addedCount++;
-          const isCheckout = cLog.actionType ? cLog.actionType.includes('領出') || cLog.actionType.includes('借出') : true;
-          transactionLogs.unshift({
+
+        if (!exists && cLog.itemName) {
+          const isCheckout = cLog.actionType ? (cLog.actionType.includes('領出') || cLog.actionType.includes('借出')) : true;
+          const isEquip = cLog.actionType ? cLog.actionType.includes('器材') : false;
+          const qty = Number(cLog.qty) || 1;
+
+          let matchedItem = DEFAULT_MASTER_ITEMS.find(i => i.id === cLog.itemId || i.name === cLog.itemName);
+          if (!matchedItem) {
+            matchedItem = DEFAULT_MASTER_ITEMS.find(i => i.name.includes(cLog.itemName) || cLog.itemName.includes(i.name));
+          }
+
+          let targetEvent = eventsList.find(e => e.name === cLog.eventName);
+          let targetEventId = targetEvent ? targetEvent.id : currentActiveEventId;
+
+          if (matchedItem && eventStockData[targetEventId]) {
+            const stock = eventStockData[targetEventId][matchedItem.id];
+            if (stock) {
+              if (isCheckout) {
+                stock.pickupQty = Math.max(0, stock.pickupQty - qty);
+                if (isEquip || matchedItem.isEquipment) {
+                  stock.borrowedQty = (stock.borrowedQty || 0) + qty;
+                } else {
+                  stock.consumedQty = (stock.consumedQty || 0) + qty;
+                }
+              } else {
+                stock.pickupQty += qty;
+                if (isEquip || matchedItem.isEquipment) {
+                  stock.borrowedQty = Math.max(0, (stock.borrowedQty || 0) - qty);
+                } else {
+                  stock.consumedQty = Math.max(0, (stock.consumedQty || 0) - qty);
+                }
+              }
+            }
+          }
+
+          const newLogObj = {
             id: 'CLOUD_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
             time: cLog.time,
+            eventId: targetEventId,
             eventName: cLog.eventName || '隨隊活動',
             unit: cLog.unit || '現場組別',
-            user: cLog.user || '現場人員',
+            user: cLog.user || '現場防護員',
             actionType: isCheckout ? 'checkout' : 'return',
-            isEquipment: cLog.actionType ? cLog.actionType.includes('器材') : false,
-            itemId: cLog.itemId || 'C_ITEM',
+            isEquipment: isEquip || (matchedItem ? matchedItem.isEquipment : false),
+            itemId: matchedItem ? matchedItem.id : (cLog.itemId || 'C_ITEM'),
             itemName: cLog.itemName,
-            qty: parseInt(cLog.qty, 10) || 1,
-            unitName: cLog.unitName || '件',
+            qty: qty,
+            unitName: cLog.unitName || (matchedItem ? matchedItem.unit : '件'),
             note: cLog.note || ''
-          });
+          };
+
+          transactionLogs.unshift(newLogObj);
+          newlyAddedLogs.push(newLogObj);
         }
       });
 
-      if (addedCount > 0) {
+      if (newlyAddedLogs.length > 0) {
         saveDataToStorage();
         refreshStaffView();
         renderAdminDashboardStats();
@@ -2691,59 +2197,85 @@
         renderUnreturnedEquipmentTable();
         renderUnitSettlementView();
         renderLogsTable();
+
+        const latest = newlyAddedLogs[0];
+        const pushBanner = document.getElementById('livePushBanner');
+        const pushText = document.getElementById('livePushText');
+        if (pushBanner && pushText) {
+          pushText.innerText = `🔔 前線即時更新：[${latest.unit}] ${latest.user} ${latest.actionType === 'checkout' ? '領出' : '歸還'} ${latest.qty} ${latest.unitName}「${latest.itemName}」！`;
+          pushBanner.classList.remove('hidden');
+          setTimeout(() => pushBanner.classList.add('hidden'), 7000);
+        }
+
+        showToast(`⚡ 雲端已即時連動！載入前線 ${newlyAddedLogs.length} 筆最新領還記錄！`, 'success');
       }
     }
 
     async function manualPullFromCloud(isBackground = false) {
-      if (!adminCloudApi) {
-        if (!isBackground) showToast('請先填寫 Google Apps Script API 網址！', 'error');
-        return;
+      if (!adminCloudApi || isFetchingCloud) return;
+
+      isFetchingCloud = true;
+      const spin = document.getElementById('instantSyncSpinner');
+      const icon = document.getElementById('instantSyncIcon');
+      if (!isBackground) {
+        if (spin) spin.style.display = 'inline-block';
+        if (icon) icon.style.display = 'none';
       }
 
-      // 優先使用 JSONP 模式，徹底避免 Failed to fetch
       try {
-        const jsonpResult = await fetchViaJsonp(adminCloudApi, 8000);
+        const jsonpResult = await fetchViaJsonp(adminCloudApi, 5000);
         if (jsonpResult && jsonpResult.status === 'success' && Array.isArray(jsonpResult.data)) {
           applyCloudLogs(jsonpResult.data);
           if (!isBackground) {
-            showToast(`已成功從雲端同步！線上共 ${jsonpResult.data.length} 筆資料`, 'success');
+            showToast(`✅ 雲端連動成功！線上累計 ${jsonpResult.data.length} 筆記錄`, 'success');
           }
+          isFetchingCloud = false;
+          if (spin) spin.style.display = 'none';
+          if (icon) icon.style.display = 'inline';
           return;
         }
-      } catch(e) {
-        console.warn('JSONP fetch failed, falling back to standard fetch...', e);
-      }
+      } catch(e) {}
 
-      // 備援方案：標準 Fetch
       try {
-        const res = await fetch(adminCloudApi);
+        const sep = adminCloudApi.includes('?') ? '&' : '?';
+        const res = await fetch(`${adminCloudApi}${sep}_nocache=${Date.now()}`);
         const result = await res.json();
         if (result && result.status === 'success' && Array.isArray(result.data)) {
           applyCloudLogs(result.data);
           if (!isBackground) {
-            showToast(`已成功從雲端同步！共載入 ${result.data.length} 筆明細`, 'success');
+            showToast(`✅ 雲端已即時同步！共核對 ${result.data.length} 筆明細`, 'success');
           }
-        } else {
-          throw new Error('回傳資料格式不符');
         }
       } catch(err) {
         if (!isBackground) {
-          showToast(`雲端連線失敗！原因：${err.message || '連線受阻'}，請點彈窗內「檢測連線」`, 'error');
+          showToast(`雲端連線失敗，請點右上角雲端中心檢查`, 'error');
         }
+      } finally {
+        isFetchingCloud = false;
+        if (spin) spin.style.display = 'none';
+        if (icon) icon.style.display = 'inline';
       }
     }
 
-    /* 雲端同步中心與 QR Code 功能補齊 */
     function initAdminCloudUI() {
-      adminCloudApi = localStorage.getItem('SPORTS_MED_ADMIN_CLOUD_API') || '';
+      const urlParams = new URLSearchParams(window.location.search);
+      const apiParam = urlParams.get('api');
+      if (apiParam && apiParam.startsWith('http')) {
+        adminCloudApi = decodeURIComponent(apiParam).trim();
+        localStorage.setItem('SPORTS_MED_ADMIN_CLOUD_API', adminCloudApi);
+      } else {
+        adminCloudApi = localStorage.getItem('SPORTS_MED_ADMIN_CLOUD_API') || '';
+      }
+
       const dot = document.getElementById('adminCloudPulseDot');
       const text = document.getElementById('adminCloudStatusText');
       const timeLabel = document.getElementById('lastCloudSyncTime');
 
       if (adminCloudApi) {
         if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-        if (text) text.innerText = "☁️ 雲端已連線";
+        if (text) text.innerText = "☁️ 雲端即時連動中";
         startAutoSyncPolling();
+        manualPullFromCloud(true);
       } else {
         if (dot) dot.className = "w-2 h-2 rounded-full bg-slate-400";
         if (text) text.innerText = "☁️ 待設定 API";
@@ -2767,7 +2299,7 @@
       const urlInput = document.getElementById('adminCloudApiUrl');
       const intervalSelect = document.getElementById('adminAutoSyncInterval');
       const newUrl = (urlInput?.value || '').trim();
-      const interval = intervalSelect ? intervalSelect.value : '15000';
+      const interval = intervalSelect ? intervalSelect.value : '5000';
 
       adminCloudApi = newUrl;
       localStorage.setItem('SPORTS_MED_ADMIN_CLOUD_API', newUrl);
@@ -2775,7 +2307,7 @@
 
       initAdminCloudUI();
       closeModal('cloudCenterModal');
-      showToast('已成功儲存雲端連線與同步頻率設定！', 'success');
+      showToast('已成功啟用極速即時監控！', 'success');
 
       if (adminCloudApi) {
         manualPullFromCloud(false);
@@ -2789,7 +2321,7 @@
       }
 
       const intervalSelect = document.getElementById('adminAutoSyncInterval');
-      const interval = parseInt(intervalSelect?.value || localStorage.getItem('SPORTS_MED_AUTO_SYNC_INTERVAL') || '15000', 10);
+      const interval = parseInt(intervalSelect?.value || localStorage.getItem('SPORTS_MED_AUTO_SYNC_INTERVAL') || '5000', 10);
 
       if (interval > 0 && adminCloudApi) {
         autoSyncTimer = setInterval(() => {
@@ -2802,20 +2334,30 @@
       const shareInput = document.getElementById('portalShareUrlInput');
       const qrImg = document.getElementById('qrCodeImgDisplay');
 
-      // 產生領用站專屬網址
-      let currentHref = window.location.href;
-      let portalUrl = currentHref.replace(/sports_medical_inventory\.html.*$/, 'sports_pickup_portal.html');
-      if (!portalUrl.includes('sports_pickup_portal.html')) {
-        portalUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/sports_pickup_portal.html');
+      let baseUrl = "https://vul3vul3zo.github.io/sports-med/";
+      let finalPortalUrl = baseUrl;
+      if (adminCloudApi) {
+        finalPortalUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'api=' + encodeURIComponent(adminCloudApi);
       }
 
-      if (shareInput) shareInput.value = portalUrl;
+      if (shareInput) shareInput.value = finalPortalUrl;
       if (qrImg) {
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(portalUrl)}`;
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(finalPortalUrl)}`;
       }
 
       const modal = document.getElementById('qrShareModal');
       if (modal) modal.classList.remove('hidden');
+    }
+
+    function updateQrCodeFromInput() {
+      const shareInput = document.getElementById('portalShareUrlInput');
+      const qrImg = document.getElementById('qrCodeImgDisplay');
+      if (!shareInput || !qrImg) return;
+
+      const url = shareInput.value.trim();
+      if (url) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      }
     }
 
     function copyPortalUrl() {
@@ -2825,7 +2367,7 @@
       input.setSelectionRange(0, 99999);
       try {
         document.execCommand('copy');
-        showToast('已成功複製現場領用站網址！', 'success');
+        showToast('已成功複製帶有自動連線金鑰的網址！', 'success');
       } catch (err) {
         showToast('複製失敗，請手動選取網址複製', 'error');
       }
