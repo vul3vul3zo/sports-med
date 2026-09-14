@@ -118,10 +118,10 @@
           </div>
 
           <div class="flex bg-slate-100 p-1 rounded-xl">
-            <button id="typeBtnCheckout" onclick="setActionType('checkout')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-xs">
+            <button id="typeBtnCheckout" type="button" onclick="setActionType('checkout')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-xs">
               領出 / 借出
             </button>
-            <button id="typeBtnReturn" onclick="setActionType('return')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+            <button id="typeBtnReturn" type="button" onclick="setActionType('return')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
               退回 / 歸還
             </button>
           </div>
@@ -566,7 +566,7 @@
 
               <span class="text-[11px] text-slate-400 font-medium px-0.5">${item.unit}</span>
 
-              <button onclick="promptQuickConfirm('${item.id}')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition">
+              <button onclick="promptQuickConfirm('${item.id}')" type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition">
                 送出
               </button>
             </div>
@@ -612,7 +612,7 @@
         unit: unit,
         actionType: currentActionType,
         itemId: item.id,
-        itemName: item.name,
+        itemName: item.name, // 🚀 關鍵：確保抓取的是真正的中文品項名稱
         isEquipment: item.isEquipment,
         qty: qty,
         unitName: item.unit,
@@ -646,7 +646,7 @@
         unit: unit,
         actionType: type,
         itemId: item.id,
-        itemName: item.name,
+        itemName: item.name, // 🚀 關鍵：確保抓取的是真正的中文品項名稱
         isEquipment: item.isEquipment,
         qty: qty,
         unitName: item.unit,
@@ -716,7 +716,7 @@
         actionType: act.actionType,
         isEquipment: act.isEquipment,
         itemId: act.itemId,
-        itemName: act.itemName,
+        itemName: act.itemName, // 🚀 關鍵：確保傳送的是真實中文名稱
         qty: act.qty,
         unitName: act.unitName,
         note: act.note
@@ -725,7 +725,7 @@
       transactionLogs.unshift(newLog);
       saveStateToStorage();
 
-      // 觸發保證單一且唯一的精準寫入
+      // 觸發雲端寫入
       dispatchContinuousCloudWrite(newLog);
 
       closeModal('confirmActionModal');
@@ -867,7 +867,7 @@
         actionType: logData.actionType,
         isEquipment: logData.isEquipment ? "true" : "false",
         itemId: logData.itemId,
-        itemName: logData.itemName,
+        itemName: logData.itemName, // 🚀 關鍵：確保將真實中文名稱傳遞給試算表
         qty: String(logData.qty),
         unitName: logData.unitName,
         note: logData.note || '',
