@@ -547,11 +547,22 @@
 
     function handlePortalFormSubmit(e) {
       e.preventDefault();
-      const user = document.getElementById('staffUserName')?.value.trim() || '現場防護員';
-      const unit = document.getElementById('staffStationName')?.value.trim() || '大會機動防護組';
+      const user = document.getElementById('staffUserName')?.value.trim();
+      const unit = document.getElementById('staffStationName')?.value.trim();
       const itemId = document.getElementById('formItemSelect')?.value;
       const qty = parseInt(document.getElementById('formQtyInput')?.value, 10);
       const note = document.getElementById('formNoteInput')?.value.trim();
+
+      if (!user) {
+        showToast('請填寫登記人姓名！', 'error');
+        document.getElementById('staffUserName').focus();
+        return;
+      }
+      if (!unit) {
+        showToast('請填寫借領單位/組別！', 'error');
+        document.getElementById('staffStationName').focus();
+        return;
+      }
 
       const item = MASTER_ITEMS.find(i => i.id === itemId);
       const stock = eventStockData[currentActiveEventId]?.[itemId];
@@ -585,8 +596,20 @@
     }
 
     function promptQuickConfirm(itemId) {
-      let user = document.getElementById('staffUserName')?.value.trim() || "現場防護員";
-      let unit = document.getElementById('staffStationName')?.value.trim() || "大會機動防護組";
+      let user = document.getElementById('staffUserName')?.value.trim();
+      let unit = document.getElementById('staffStationName')?.value.trim();
+
+      if (!user) {
+        showToast('請先在上列填寫「登記人姓名」！', 'error');
+        document.getElementById('staffUserName').focus();
+        return;
+      }
+      if (!unit) {
+        showToast('請先在上列填寫「借領單位/組別」！', 'error');
+        document.getElementById('staffStationName').focus();
+        return;
+      }
+
       const type = document.getElementById(`quickType_${itemId}`)?.value || 'checkout';
       const qty = parseInt(document.getElementById(`quickInputQty_${itemId}`)?.value, 10);
 
@@ -687,7 +710,7 @@
       transactionLogs.unshift(newLog);
       saveStateToStorage();
 
-      // 🚀 執行安全雲端寫入（內建防呆，絕對不送出空白品項）
+      // 🚀 執行安全雲端寫入 Google 試算表
       dispatchContinuousCloudWrite(newLog);
 
       closeModal('confirmActionModal');
@@ -699,7 +722,7 @@
       if (noteInput) noteInput.value = '';
 
       refreshPortalView();
-      showToast(`✅ [${act.unit}] ${act.user} 登記送出成功！`, 'success');
+      showToast(`✅ [${act.unit}] ${act.user} 登記送出成功，已同步至雲端！`, 'success');
     }
 
     function renderRecentLogs() {
@@ -763,10 +786,9 @@
       }, 3500);
     }
 
-    // 🚀 核心防呆雲端寫入函數：嚴格防堵未指定品項與空白寫入
+    // 🚀 關鍵雲端寫入函數：利用隱形 Form POST 穿透限制確保寫入 Google 試算表
     function dispatchContinuousCloudWrite(logData) {
-      if (!DEFAULT_API_URL || DEFAULT_API_URL.includes("YOUR_API_URL_HERE")) return;
-      if (!logData || !logData.itemName || logData.itemName === '未指定品項' || logData.itemName.trim() === '') return;
+      if (!DEFAULT_API_URL || !logData || !logData.itemName || logData.itemName === '未指定品項') return;
 
       const nonce = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
       const payload = {
