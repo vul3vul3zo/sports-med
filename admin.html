@@ -401,3 +401,41 @@
   </script>
 </body>
 </html>
+
+// 📦 現場前端將資料送往 Google 試算表的函數
+function sendDataToCloud(payload) {
+  // 這是您的 Google 雲端 API 管道網址
+  const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
+  
+  const frameName = 'cloud_frame_' + Date.now();
+  const iframe = document.createElement('iframe');
+  iframe.name = frameName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_URL;
+  form.target = frameName;
+  form.style.display = 'none';
+
+  // 將所有登記欄位打包成隱藏欄位傳送
+  Object.keys(payload).forEach(key => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = payload[key];
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+
+  // 1.5秒後自動清除隱藏表單與框架
+  setTimeout(() => {
+    try {
+      if (form.parentNode) form.parentNode.removeChild(form);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    } catch(e) {}
+  }, 1500);
+}
