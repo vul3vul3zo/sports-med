@@ -299,7 +299,7 @@
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <script>
-    // 🚀 已寫死您的 Google Apps Script 部署網址，任何人打開隨時永久連動！
+    // 🚀 已完整寫死您的 Google Apps Script 部署網址，全自動連線免設定！
     const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
 
     const MASTER_ITEMS = [
@@ -687,7 +687,7 @@
       transactionLogs.unshift(newLog);
       saveStateToStorage();
 
-      // 🚀 即時寫入 Google 雲端
+      // 🚀 執行安全雲端寫入（內建防呆，絕對不送出空白品項）
       dispatchContinuousCloudWrite(newLog);
 
       closeModal('confirmActionModal');
@@ -763,10 +763,10 @@
       }, 3500);
     }
 
-    // 🚀 強制雲端同步函數：附帶防呆保護，絕對不發送空白未指定品項
+    // 🚀 核心防呆雲端寫入函數：嚴格防堵未指定品項與空白寫入
     function dispatchContinuousCloudWrite(logData) {
       if (!DEFAULT_API_URL || DEFAULT_API_URL.includes("YOUR_API_URL_HERE")) return;
-      if (!logData || !logData.itemName || logData.itemName === '未指定品項') return;
+      if (!logData || !logData.itemName || logData.itemName === '未指定品項' || logData.itemName.trim() === '') return;
 
       const nonce = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
       const payload = {
