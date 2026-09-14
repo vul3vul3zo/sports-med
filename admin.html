@@ -3,128 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運動防護物資管理與現場領用站 • 雲端即時連動</title>
+  <title>運動防護物資總管系統</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
+    .fade-enter { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
 
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black">⚡</div>
-        <div>
-          <h1 class="text-base font-black text-slate-900">運動防護物資管理系統</h1>
-          <p class="text-[11px] text-slate-500">現場領用站 ⇄ 總管後台 ⇄ Google 試算表雲端即時連動</p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black">📊</div>
+          <div>
+            <h1 class="text-base sm:text-lg font-black text-slate-900">運動防護物資總管系統</h1>
+            <p class="text-xs text-slate-500">初始歸零 ⇄ 新增活動 ⇄ 後台總控與雲端同步</p>
+          </div>
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button onclick="switchTab('staff')" id="btnStaff" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white shadow-xs">📋 現場領用站</button>
-        <button onclick="switchTab('admin')" id="btnAdmin" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">📊 後台總管系統</button>
-        <button onclick="syncWithCloud()" class="px-2.5 py-1.5 bg-teal-50 text-teal-800 rounded-lg text-xs font-bold border border-teal-200">⚡ 立即同步</button>
+
+        <div class="flex items-center gap-2">
+          <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <button id="tabAdmin" onclick="switchTab('admin')" class="px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs">📊 後台庫存</button>
+            <button id="tabUnits" onclick="switchTab('units')" class="px-3 py-1.5 rounded-lg text-slate-600">🏢 單位對帳</button>
+            <button id="tabLogs" onclick="switchTab('logs')" class="px-3 py-1.5 rounded-lg text-slate-600">📑 流水明細</button>
+          </div>
+          <button onclick="openNewEventModal()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition">➕ 新增活動專案</button>
+          <button onclick="syncAdminWithCloud()" class="px-3 py-1.5 bg-teal-50 text-teal-800 rounded-xl text-xs font-bold border border-teal-200">⚡ 立即刷新</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
-    
-    <!-- 現場領用區 -->
-    <section id="viewStaff" class="space-y-4">
-      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
-        <span class="text-xs font-bold text-slate-500">當前隨隊專案：</span>
-        <select id="staffEventSelect" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none">
-          <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
-          <option value="桃園計畫隨隊">桃園計畫隨隊</option>
-          <option value="其他活動備註">其他活動備註</option>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- 活動專案切換列 -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-lg">🎯</span>
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase">當前檢視專案活動</span>
+          <div class="text-base font-black text-slate-900" id="adminActiveEventLabel">苗栗計畫隨隊</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500">切換活動：</label>
+        <select id="adminEventSelect" onchange="changeAdminEvent(this.value)" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none">
         </select>
       </div>
+    </div>
 
-      <div class="bg-slate-900 text-white rounded-2xl p-4 shadow-sm grid grid-cols-2 gap-3 text-xs">
-        <div>
-          <label class="block font-bold text-amber-300 mb-1">借領單位 *</label>
-          <input type="text" id="staffUnit" placeholder="例：田徑組" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-white outline-none">
+    <!-- 頁面 1: 後台庫存 -->
+    <section id="viewAdmin" class="space-y-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-xs font-bold text-slate-400 uppercase">總在席量</span>
+          <div class="mt-2 text-2xl font-black text-slate-900" id="statAllTotal">0</div>
         </div>
-        <div>
-          <label class="block font-bold text-slate-300 mb-1">姓名 *</label>
-          <input type="text" id="staffUser" placeholder="例：林防護員" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-white outline-none">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-xs font-bold text-slate-400 uppercase">大倉庫存倉</span>
+          <div class="mt-2 text-2xl font-black text-indigo-700" id="statWarehouseTotal">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-xs font-bold text-slate-400 uppercase">現場領用區現貨</span>
+          <div class="mt-2 text-2xl font-black text-teal-700" id="statPickupTotal">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-xs font-bold text-slate-400 uppercase">外借 / 消耗總計</span>
+          <div class="mt-2 text-2xl font-black text-amber-600" id="statBorrowedTotal">0</div>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
-        <h2 class="text-sm font-black text-slate-900">📦 快速登記表單</h2>
-        <form onsubmit="handlePortalSubmit(event)" class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">選擇品項 *</label>
-            <select id="formItem" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-semibold outline-none">
-              <option value="皮膚保護膜-2.75 吋寬">皮膚保護膜-2.75 吋寬 (卷)</option>
-              <option value="運動貼布-1.5 吋寬">運動貼布-1.5 吋寬 (卷)</option>
-              <option value="肌內效貼布">肌內效貼布 (卷)</option>
-              <option value="水泡護墊(2nd Skin)">水泡護墊(2nd Skin) (片)</option>
-              <option value="生理食鹽水（小）">生理食鹽水（小） (瓶)</option>
-              <option value="冰敷用塑膠袋">冰敷用塑膠袋 (包)</option>
-              <option value="防護包">防護包 (個)</option>
-              <option value="冰桶-大">冰桶-大 (個)</option>
-              <option value="捲式鋁製夾板">捲式鋁製夾板 (卷)</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">動作類型 *</label>
-              <select id="formAction" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-                <option value="領出">📦 領出 / 借出</option>
-                <option value="歸還">🔄 歸還 / 退回</option>
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">數量 *</label>
-              <input type="number" id="formQty" min="1" value="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-            </div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">備註說明</label>
-            <input type="text" id="formNote" placeholder="例：腳踝固定" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none">
-          </div>
-          <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold shadow transition">
-            確認送出至雲端試算表
-          </button>
-        </form>
-      </div>
-    </section>
-
-    <!-- 後台總管區 -->
-    <section id="viewAdmin" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
-        <h3 class="text-sm font-black text-slate-900">📊 雲端試算表即時流水明細與總表</h3>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-black text-slate-900">📊 品項總表（初始預設歸零，請點擊「編輯數量」自由 Key 入）</h3>
+        </div>
         <div class="overflow-x-auto rounded-xl border border-slate-200">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                <th class="py-3 px-3">登記時間</th>
-                <th class="py-3 px-3">活動專案</th>
-                <th class="py-3 px-3">借領單位</th>
-                <th class="py-3 px-3">經手人</th>
+                <th class="py-3 px-3">品項名稱</th>
+                <th class="py-3 px-3">性質</th>
+                <th class="py-3 px-3 text-right">大倉庫存倉</th>
+                <th class="py-3 px-3 text-right">現場領用區</th>
+                <th class="py-3 px-3 text-right font-black text-slate-900">總在席量</th>
+                <th class="py-3 px-3 text-center">設定與 Key 數量</th>
+              </tr>
+            </thead>
+            <tbody id="adminStockTableBody" class="divide-y divide-slate-100 text-slate-700">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 頁面 2: 單位對帳 -->
+    <section id="viewUnits" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <h3 class="text-sm font-black text-slate-900">🏢 各單位領還與結算對帳</h3>
+        <div id="unitSettlementContainer" class="space-y-3 text-xs">
+          <div class="text-slate-400 py-6 text-center">尚無單位領借紀錄</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 頁面 3: 流水明細 -->
+    <section id="viewLogs" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <h3 class="text-sm font-black text-slate-900">📑 雲端試算表即時流水明細</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                <th class="py-3 px-3">時間</th>
+                <th class="py-3 px-3">活動名稱</th>
+                <th class="py-3 px-3">借領單位 / 人員</th>
                 <th class="py-3 px-3">動作</th>
                 <th class="py-3 px-3">品項名稱</th>
                 <th class="py-3 px-3 text-right">數量</th>
                 <th class="py-3 px-3">備註</th>
               </tr>
             </thead>
-            <tbody id="adminTableBody" class="divide-y divide-slate-100 text-slate-700">
-              <tr><td colspan="8" class="py-8 text-center text-slate-400">正在向 Google 試算表讀取資料...</td></tr>
+            <tbody id="adminLogsTableBody" class="divide-y divide-slate-100 text-slate-700">
+              <tr><td colspan="7" class="py-6 text-center text-slate-400">正在向 Google 試算表讀取資料...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
+
   </main>
+
+  <!-- 新增活動彈窗 -->
+  <div id="newEventModal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-900">➕ 新增隨隊活動專案</h3>
+        <button onclick="document.getElementById('newEventModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form onsubmit="handleCreateNewEvent(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">活動專案名稱 *</label>
+          <input type="text" id="newEventNameInput" required placeholder="例：全大運防護隨隊" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="document.getElementById('newEventModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">確認新增</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 編輯數量彈窗 -->
+  <div id="editQtyModal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-900" id="editQtyTitle">✏️ Key 入與修改數量</h3>
+        <button onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form onsubmit="handleEditQtySubmit(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="editItemId">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">大倉庫存倉數量 *</label>
+          <input type="number" id="editWhQty" min="0" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">現場領用區現貨數量 *</label>
+          <input type="number" id="editPkQty" min="0" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold">取消</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">儲存數量設定</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold hidden z-50"></div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
+    const MASTER_ITEMS = [
+      { id: "T01", name: "皮膚保護膜-2.75 吋寬", unit: "卷" },
+      { id: "T02", name: "運動貼布-1.5 吋寬", unit: "卷" },
+      { id: "T03", name: "輕型彈性貼布-2 吋寬", unit: "卷" },
+      { id: "T04", name: "重型彈性貼布-2 吋寬", unit: "卷" },
+      { id: "T05", name: "重型彈性貼布-3 吋寬", unit: "卷" },
+      { id: "T06", name: "肌內效貼布", unit: "卷" },
+      { id: "T07", name: "膚色自黏貼布", unit: "卷" },
+      { id: "T08", name: "動態貼布-2 吋", unit: "卷" },
+      { id: "T09", name: "動態貼布-3 吋", unit: "卷" },
+      { id: "T10", name: "史崔普肌動態活力貼-2 吋", unit: "卷" },
+      { id: "T11", name: "史崔普肌動態活力貼-3 吋", unit: "卷" },
+      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", unit: "片" },
+      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", unit: "片" },
+      { id: "W01", name: "水泡護墊(2nd Skin)", unit: "片" },
+      { id: "W02", name: "鼻血止血棉棒", unit: "盒" },
+      { id: "W03", name: "酒精棉片", unit: "盒" },
+      { id: "W04", name: "優碘棉片", unit: "盒" },
+      { id: "W05", name: "防水透氣 OK 繃-一般型", unit: "盒" },
+      { id: "W06", name: "防水透氣 OK 繃-大型", unit: "盒" },
+      { id: "W07", name: "生理食鹽水（小）", unit: "瓶" },
+      { id: "W08", name: "3M 透氣紙膠 1 吋", unit: "卷" },
+      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", unit: "包" },
+      { id: "W10", name: "檢診手套(無粉)", unit: "隻" },
+      { id: "W11", name: "乾洗手", unit: "瓶" },
+      { id: "W12", name: "滅菌傷口清洗棉棒", unit: "包" },
+      { id: "O01", name: "冰敷用塑膠袋", unit: "包" },
+      { id: "O02", name: "冰敷膠膜", unit: "卷" },
+      { id: "O03", name: "熱身用運動軟膏", unit: "瓶" },
+      { id: "E01", name: "防護包", unit: "個" },
+      { id: "E02", name: "冰桶-大", unit: "個" },
+      { id: "E03", name: "冰桶-中", unit: "個" },
+      { id: "E04", name: "可調式頸圈", unit: "個" },
+      { id: "E05", name: "折疊處理床", unit: "個" },
+      { id: "E06", name: "捲式鋁製夾板", unit: "卷" },
+      { id: "E07", name: "三折式關節夾板", unit: "個" },
+      { id: "E08", name: "肢體固定三角巾", unit: "條" },
+      { id: "E09", name: "4 吋加長型彈繃", unit: "卷" }
+    ];
+
+    let eventsList = ["苗栗計畫隨隊", "桃園計畫隨隊"];
+    let currentEvent = "苗栗計畫隨隊";
+    let stockData = {}; // 初始預設全部歸零 (0)
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -133,89 +238,128 @@
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
 
-    function switchTab(tab) {
-      const staffSec = document.getElementById('viewStaff');
-      const adminSec = document.getElementById('viewAdmin');
-      const bStaff = document.getElementById('btnStaff');
-      const bAdmin = document.getElementById('btnAdmin');
-
-      if (tab === 'staff') {
-        staffSec.classList.remove('hidden');
-        adminSec.classList.add('hidden');
-        bStaff.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white shadow-xs";
-        bAdmin.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900";
-      } else {
-        staffSec.classList.add('hidden');
-        adminSec.classList.remove('hidden');
-        bAdmin.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white shadow-xs";
-        bStaff.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900";
-        syncWithCloud();
-      }
-    }
-
-    function handlePortalSubmit(e) {
-      e.preventDefault();
-      const unit = document.getElementById('staffUnit').value.trim();
-      const user = document.getElementById('staffUser').value.trim();
-      if (!unit || !user) {
-        showToast('請填寫借領單位與登記人姓名！');
-        return;
-      }
-
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = "⏳ 正在寫入 Google 試算表...";
-      btn.disabled = true;
-
-      const payload = {
-        action: 'add',
-        time: new Date().toLocaleString('zh-TW', { hour12: false }),
-        eventName: document.getElementById('staffEventSelect').value,
-        unit: unit,
-        user: user,
-        actionType: document.getElementById('formAction').value,
-        itemName: document.getElementById('formItem').value,
-        qty: document.getElementById('formQty').value,
-        unitName: '個/卷',
-        note: document.getElementById('formNote').value.trim()
-      };
-
-      const frameName = 'iframe_' + Date.now();
-      const iframe = document.createElement('iframe');
-      iframe.name = frameName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = API_URL;
-      form.target = frameName;
-      form.style.display = 'none';
-
-      Object.keys(payload).forEach(k => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = k;
-        input.value = payload[k];
-        form.appendChild(input);
+    function initZeroStock() {
+      eventsList.forEach(ev => {
+        if (!stockData[ev]) stockData[ev] = {};
+        MASTER_ITEMS.forEach(it => {
+          if (!stockData[ev][it.id]) {
+            stockData[ev][it.id] = { wh: 0, pk: 0 }; // 初始全部歸零
+          }
+        });
       });
-
-      document.body.appendChild(form);
-      form.submit();
-
-      setTimeout(() => {
-        document.body.removeChild(form);
-        document.body.removeChild(iframe);
-        btn.innerText = "確認送出至雲端試算表";
-        btn.disabled = false;
-        showToast('✅ 成功寫入 Google 試算表與總表！');
-        document.getElementById('formQty').value = '1';
-        document.getElementById('formNote').value = '';
-        syncWithCloud();
-      }, 1500);
     }
 
-    function syncWithCloud() {
-      const tbody = document.getElementById('adminTableBody');
+    function switchTab(tab) {
+      document.getElementById('viewAdmin').classList.add('hidden');
+      document.getElementById('viewUnits').classList.add('hidden');
+      document.getElementById('viewLogs').classList.add('hidden');
+      document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg text-slate-600";
+      document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg text-slate-600";
+      document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg text-slate-600";
+
+      if (tab === 'admin') {
+        document.getElementById('viewAdmin').classList.remove('hidden');
+        document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+      } else if (tab === 'units') {
+        document.getElementById('viewUnits').classList.remove('hidden');
+        document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+      } else if (tab === 'logs') {
+        document.getElementById('viewLogs').classList.remove('hidden');
+        document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg bg-white text-teal-700 shadow-xs";
+      }
+    }
+
+    function renderAdminEvents() {
+      const sel = document.getElementById('adminEventSelect');
+      sel.innerHTML = eventsList.map(e => `<option value="${e}" ${e === currentEvent ? 'selected' : ''}>${e}</option>`).join('');
+      document.getElementById('adminActiveEventLabel').innerText = currentEvent;
+    }
+
+    function changeAdminEvent(val) {
+      currentEvent = val;
+      document.getElementById('adminActiveEventLabel').innerText = val;
+      renderAdminTable();
+      renderStats();
+    }
+
+    function openNewEventModal() {
+      document.getElementById('newEventModal').classList.remove('hidden');
+    }
+
+    function handleCreateNewEvent(e) {
+      e.preventDefault();
+      const name = document.getElementById('newEventNameInput').value.trim();
+      if (!name) return;
+      if (!eventsList.includes(name)) {
+        eventsList.push(name);
+        initZeroStock();
+        renderAdminEvents();
+        changeAdminEvent(name);
+        showToast(`✅ 成功新增活動專案「${name}」！`);
+      }
+      document.getElementById('newEventModal').classList.add('hidden');
+      document.getElementById('newEventNameInput').value = '';
+    }
+
+    function renderAdminTable() {
+      const tbody = document.getElementById('adminStockTableBody');
+      const curStock = stockData[currentEvent] || {};
+      tbody.innerHTML = MASTER_ITEMS.map(it => {
+        const s = curStock[it.id] || { wh: 0, pk: 0 };
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3 px-3 font-bold text-slate-900">${it.name} (${it.unit})</td>
+            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">防護物資</span></td>
+            <td class="py-3 px-3 text-right font-bold text-indigo-700">${s.wh} ${it.unit}</td>
+            <td class="py-3 px-3 text-right font-black text-teal-700">${s.pk} ${it.unit}</td>
+            <td class="py-3 px-3 text-right font-black text-slate-900 bg-slate-50/50">${s.wh + s.pk} ${it.unit}</td>
+            <td class="py-3 px-3 text-center">
+              <button onclick="openEditQty('${it.id}')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200">編輯數量</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openEditQty(itemId) {
+      const it = MASTER_ITEMS.find(i => i.id === itemId);
+      const s = stockData[currentEvent][itemId] || { wh: 0, pk: 0 };
+      document.getElementById('editItemId').value = itemId;
+      document.getElementById('editQtyTitle').innerText = `✏️ Key 入數量：${it.name}`;
+      document.getElementById('editWhQty').value = s.wh;
+      document.getElementById('editPkQty').value = s.pk;
+      document.getElementById('editQtyModal').classList.remove('hidden');
+    }
+
+    function handleEditQtySubmit(e) {
+      e.preventDefault();
+      const itemId = document.getElementById('editItemId').value;
+      const wh = parseInt(document.getElementById('editWhQty').value, 10) || 0;
+      const pk = parseInt(document.getElementById('editPkQty').value, 10) || 0;
+
+      stockData[currentEvent][itemId] = { wh: wh, pk: pk };
+      document.getElementById('editQtyModal').classList.add('hidden');
+      renderAdminTable();
+      renderStats();
+      showToast('✅ 數量設定已更新！');
+    }
+
+    function renderStats() {
+      let wh = 0, pk = 0;
+      const curStock = stockData[currentEvent] || {};
+      MASTER_ITEMS.forEach(it => {
+        const s = curStock[it.id] || { wh: 0, pk: 0 };
+        wh += s.wh;
+        pk += s.pk;
+      });
+      document.getElementById('statAllTotal').innerText = (wh + pk).toLocaleString();
+      document.getElementById('statWarehouseTotal').innerText = wh.toLocaleString();
+      document.getElementById('statPickupTotal').innerText = pk.toLocaleString();
+      document.getElementById('statBorrowedTotal').innerText = '0';
+    }
+
+    function syncAdminWithCloud() {
+      const tbody = document.getElementById('adminLogsTableBody');
       const script = document.createElement('script');
       const cbName = 'cb_' + Date.now();
 
@@ -224,22 +368,21 @@
         if (script.parentNode) script.parentNode.removeChild(script);
         if (res && res.status === 'success' && Array.isArray(res.data)) {
           if (res.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">目前試算表尚無任何紀錄</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">目前試算表尚無任何領用紀錄</td></tr>`;
             return;
           }
           tbody.innerHTML = res.data.reverse().map(l => `
             <tr class="hover:bg-slate-50 transition">
               <td class="py-3 px-3 font-mono text-slate-500">${l.time}</td>
               <td class="py-3 px-3 font-bold text-slate-900">${l.eventName}</td>
-              <td class="py-3 px-3 font-bold text-amber-800">${l.unit}</td>
-              <td class="py-3 px-3">${l.user}</td>
-              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-bold ${l.actionType.includes('領') ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">${l.actionType}</span></td>
+              <td class="py-3 px-3 font-bold text-amber-800">${l.unit} / ${l.user}</td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-bold ${l.actionType.includes('領') || l.actionType === 'checkout' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">${l.actionType}</span></td>
               <td class="py-3 px-3 font-bold text-slate-900">${l.itemName}</td>
               <td class="py-3 px-3 text-right font-black text-teal-700">${l.qty} ${l.unitName}</td>
               <td class="py-3 px-3 text-slate-500">${l.note || '-'}</td>
             </tr>
           `).join('');
-          showToast('✅ 成功從雲端同步最新紀錄！');
+          showToast('✅ 成功從雲端同步最新流水帳！');
         }
       };
 
@@ -248,7 +391,13 @@
       document.body.appendChild(script);
     }
 
-    window.onload = function() { syncWithCloud(); };
+    window.onload = function() {
+      initZeroStock();
+      renderAdminEvents();
+      renderAdminTable();
+      renderStats();
+      syncAdminWithCloud();
+    };
   </script>
 </body>
 </html>
