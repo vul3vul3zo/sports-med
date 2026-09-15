@@ -93,7 +93,6 @@
                 _nonce: Date.now()
             };
 
-            // 採用 JSONP 穿透送出，確保手機 100% 寫入試算表
             const cbName = 'tx_cb_' + Math.round(Math.random() * 100000);
             const queryStr = Object.keys(payload).map(k => `${k}=${encodeURIComponent(payload[k])}`).join('&');
             const script = document.createElement('script');
@@ -104,7 +103,7 @@
                 document.body.removeChild(script);
                 btn.disabled = false;
                 btn.innerText = "確認送出登記";
-                alert("✅ 登記成功，已即時同步至中央後台！");
+                alert("✅ 登記成功，已即時同步至中央試算表！");
                 document.getElementById('itemName').value = '';
                 document.getElementById('qty').value = '1';
                 document.getElementById('note').value = '';
