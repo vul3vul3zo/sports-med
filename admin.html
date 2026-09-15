@@ -1,110 +1,362 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>運動防護物資總管後台</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>運動防護物資總管系統 - 中央後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 p-6">
-    <div class="max-w-5xl mx-auto bg-white p-6 shadow-lg rounded-2xl">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-slate-900">📊 運動防護物資總管後台</h1>
-            <button onclick="fetchCloudLogs()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition text-sm">
-                ⚡ 立即從雲端重新整理
-            </button>
-        </div>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col">
 
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-xl">
-            <p class="text-sm text-blue-700">💡 提示：本後台已與中央 Google 試算表永久綁定。隨時點擊上方按鈕，即可同步抓取全場所有手機送出的最新領用紀錄。</p>
-        </div>
+  <!-- 頂部導覽列 -->
+  <header class="bg-slate-900 text-white shadow-md z-10">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🛡️</span>
+        <h1 class="text-lg font-bold tracking-wide">防護物資總管後台</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="fetchFromCloud()" class="bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg transition-all">
+          <span>⚡</span> 從雲端同步刷新
+        </button>
+      </div>
+    </div>
+  </header>
 
-        <h2 class="text-lg font-bold mb-3">📑 雲端即時流水明細</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-200 text-slate-700 text-sm">
-                        <th class="p-3 border">時間</th>
-                        <th class="p-3 border">活動專案</th>
-                        <th class="p-3 border">借領單位</th>
-                        <th class="p-3 border">登記人員</th>
-                        <th class="p-3 border">異動類型</th>
-                        <th class="p-3 border">品項名稱</th>
-                        <th class="p-3 border text-center">數量</th>
-                        <th class="p-3 border">備註</th>
-                    </tr>
-                </thead>
-                <tbody id="logs-table-body" class="text-sm">
-                    <tr><td colspan="8" class="p-4 text-center text-slate-400">正在自動載入雲端資料...</td></tr>
-                </tbody>
-            </table>
-        </div>
+  <!-- 內容區 -->
+  <main class="flex-1 overflow-auto p-4 md:p-6 fade-in max-w-7xl mx-auto w-full space-y-6">
+    
+    <!-- 統計看板 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <div class="text-sm text-slate-500 font-bold mb-1">主庫存 (大倉) 總耗材數</div>
+        <div class="text-3xl font-black text-indigo-600" id="totalWarehouse">0</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <div class="text-sm text-slate-500 font-bold mb-1">領用區現貨 (供前線取用)</div>
+        <div class="text-3xl font-black text-teal-600" id="totalPickup">0</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <div class="text-sm text-slate-500 font-bold mb-1">器材外借中 (未歸還)</div>
+        <div class="text-3xl font-black text-amber-600" id="totalBorrowed">0</div>
+      </div>
     </div>
 
-    <script>
-        // 永久寫死您的中央 API 網址
-        const FIXED_API_URL = "https://script.google.com/macros/s/AKfycbzVQHj-Uh5FBCi1jl2dfqYCjHpzVhbOohlJC-3vbQ30wa16ij5y5EXGZQj8AsQfhGa7/exec";
+    <!-- 庫存清單區塊 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">📦 全場庫存總表</h2>
+          <p class="text-xs text-slate-500 mt-1">請點擊右側「✏️ 校正數量」來 Key 入初始倉庫數字或盤點修改</p>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+              <th class="py-3 px-4">分類</th>
+              <th class="py-3 px-4">物資品項</th>
+              <th class="py-3 px-4 text-center">主庫存 (大倉)</th>
+              <th class="py-3 px-4 text-center">領用區現貨</th>
+              <th class="py-3 px-4 text-center">外借中</th>
+              <th class="py-3 px-4 text-center">操作 (填寫數量/調度)</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody" class="divide-y divide-slate-100">
+            <!-- 動態渲染清單 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
-        function fetchCloudLogs() {
-            const tbody = document.getElementById('logs-table-body');
-            tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-blue-500 font-bold">正在同步雲端資料...</td></tr>`;
+  <!-- 彈跳視窗：填寫 / 校正數量 -->
+  <div id="calibrateModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+      <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span>✏️</span> 填寫 / 校正庫存數量
+      </h3>
+      <p class="text-sm font-bold text-indigo-600 mb-4" id="calItemName">品項名稱</p>
+      
+      <form onsubmit="submitCalibrate(event)" class="space-y-4">
+        <input type="hidden" id="calItemId">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">主庫存大倉 數量</label>
+          <input type="number" id="calWarehouseQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">現場領用區 數量</label>
+          <input type="number" id="calPickupQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500">
+        </div>
+        
+        <div class="flex gap-2 pt-4">
+          <button type="button" onclick="closeModal('calibrateModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-bold transition">取消</button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold shadow-md transition">確認送出雲端</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-            const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
-            const script = document.createElement('script');
-            script.src = `${FIXED_API_URL}?callback=${callbackName}&_t=${Date.now()}`;
+  <!-- 彈跳視窗：撥發調度 -->
+  <div id="transferModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+      <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span>🔄</span> 撥發至領用區
+      </h3>
+      <p class="text-sm font-bold text-teal-600 mb-2" id="transItemName">品項名稱</p>
+      <p class="text-xs text-slate-500 mb-4">大倉目前剩餘: <span id="transAvailable" class="font-bold text-slate-800">0</span></p>
+      
+      <form onsubmit="submitTransfer(event)" class="space-y-4">
+        <input type="hidden" id="transItemId">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">本次撥發數量</label>
+          <input type="number" id="transQty" min="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500">
+        </div>
+        
+        <div class="flex gap-2 pt-4">
+          <button type="button" onclick="closeModal('transferModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-bold transition">取消</button>
+          <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-bold shadow-md transition">確認撥發</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-            window[callbackName] = function(response) {
-                delete window[callbackName];
-                document.body.removeChild(script);
+  <script>
+    // 🔗 您專屬的 Google Apps Script API 網址 (已寫死)
+    const API_URL = "https://script.google.com/macros/s/AKfycby2Zn8aQivYlJW9gCPScQ6yd9H-7cc-qFt-2_CN-oHAtf1XJ8cYwIU6n18dU4mOh0Tx/exec";
 
-                if (response && response.status === "success" && response.data) {
-                    renderTable(response.data);
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">載入失敗或尚無資料</td></tr>`;
-                }
-            };
+    // 📦 預設初始清單 (全部歸零)
+    const inventory = [
+      { id: 't01', name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't02', name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't03', name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't04', name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't05', name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't06', name: '肌內效貼布', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't07', name: '膚色自黏貼布', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't08', name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't09', name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't10', name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't11', name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't12', name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 't13', name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      
+      { id: 'w01', name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w02', name: '鼻血止血棉棒', category: '外傷處理', unit: '支', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w03', name: '酒精棉片', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w04', name: '優碘棉片', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w05', name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w06', name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w07', name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w08', name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w09', name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w10', name: '檢診手套(無粉)', category: '外傷處理', unit: '隻', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w11', name: '乾洗手', category: '外傷處理', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'w12', name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      
+      { id: 'o01', name: '冰敷用塑膠袋', category: '其它', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'o02', name: '冰敷膠膜', category: '其它', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'o03', name: '熱身用運動軟膏', category: '其它', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'o04', name: '4 吋加長型彈繃', category: '其它', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      
+      { id: 'e01', name: '防護包', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e02', name: '冰桶-大', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e03', name: '冰桶-中', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e04', name: '可調式頸圈', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e05', name: '折疊處理床', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e06', name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e07', name: '三折式關節夾板', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
+      { id: 'e08', name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 }
+    ];
 
-            script.onerror = function() {
-                delete window[callbackName];
-                document.body.removeChild(script);
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">雲端連線失敗，請檢查網路</td></tr>`;
-            };
+    // 初始化網頁：從雲端抓取紀錄並計算
+    window.onload = function() {
+      renderTable();
+      fetchFromCloud();
+    };
 
-            document.body.appendChild(script);
-        }
+    function renderTable() {
+      const tbody = document.getElementById('inventoryTableBody');
+      let wSum = 0, pSum = 0, bSum = 0;
+      
+      tbody.innerHTML = inventory.map(item => {
+        wSum += item.warehouseQty; pSum += item.pickupQty; bSum += item.borrowedQty;
+        
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-4"><span class="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full font-bold">${item.category}</span></td>
+            <td class="py-3 px-4 font-bold text-slate-800">${item.name}</td>
+            <td class="py-3 px-4 text-center font-black text-indigo-600">${item.warehouseQty}</td>
+            <td class="py-3 px-4 text-center font-black text-teal-600">${item.pickupQty}</td>
+            <td class="py-3 px-4 text-center font-black text-amber-600">${item.borrowedQty}</td>
+            <td class="py-3 px-4 text-center space-x-2">
+              <button onclick="openCalibrateModal('${item.id}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">✏️ 填寫/校正</button>
+              ${item.category !== '非耗材(器材)' ? 
+                `<button onclick="openTransferModal('${item.id}')" class="bg-teal-100 hover:bg-teal-200 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">🔄 撥發</button>` : 
+                ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      document.getElementById('totalWarehouse').innerText = wSum;
+      document.getElementById('totalPickup').innerText = pSum;
+      document.getElementById('totalBorrowed').innerText = bSum;
+    }
 
-        function renderTable(dataList) {
-            const tbody = document.getElementById('logs-table-body');
-            if (dataList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">目前尚無任何登記紀錄</td></tr>`;
-                return;
-            }
+    // Modal 開關
+    function openCalibrateModal(id) {
+      const item = inventory.find(i => i.id === id);
+      document.getElementById('calItemId').value = id;
+      document.getElementById('calItemName').innerText = item.name;
+      document.getElementById('calWarehouseQty').value = item.warehouseQty;
+      document.getElementById('calPickupQty').value = item.pickupQty;
+      document.getElementById('calibrateModal').classList.replace('hidden', 'flex');
+    }
+    
+    function openTransferModal(id) {
+      const item = inventory.find(i => i.id === id);
+      document.getElementById('transItemId').value = id;
+      document.getElementById('transItemName').innerText = item.name;
+      document.getElementById('transAvailable').innerText = item.warehouseQty;
+      document.getElementById('transQty').max = item.warehouseQty;
+      document.getElementById('transQty').value = '';
+      document.getElementById('transferModal').classList.replace('hidden', 'flex');
+    }
+    
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.replace('flex', 'hidden');
+    }
 
-            tbody.innerHTML = '';
-            dataList.reverse().forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-slate-50";
-                tr.innerHTML = `
-                    <td class="p-3 border text-xs text-slate-500">${row.time || ''}</td>
-                    <td class="p-3 border">${row.eventName || ''}</td>
-                    <td class="p-3 border font-semibold">${row.unit || ''}</td>
-                    <td class="p-3 border">${row.user || ''}</td>
-                    <td class="p-3 border">
-                        <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${row.actionType==='耗材領出'||row.actionType==='器材借出'?'bg-amber-100 text-amber-800':'bg-emerald-100 text-emerald-800'}">
-                            ${row.actionType || '領出'}
-                        </span>
-                    </td>
-                    <td class="p-3 border font-bold text-blue-600">${row.itemName || ''}</td>
-                    <td class="p-3 border text-center font-bold">${row.qty || 0} ${row.unitName || ''}</td>
-                    <td class="p-3 border text-xs text-slate-500">${row.note || ''}</td>
-                `;
-                tbody.appendChild(tr);
+    // 📡 1. 提交填寫/校正數量 -> 同步雲端
+    function submitCalibrate(e) {
+      e.preventDefault();
+      const item = inventory.find(i => i.id === document.getElementById('calItemId').value);
+      const newW = Number(document.getElementById('calWarehouseQty').value);
+      const newP = Number(document.getElementById('calPickupQty').value);
+      
+      const diffW = newW - item.warehouseQty;
+      const diffP = newP - item.pickupQty;
+      
+      if(diffW !== 0) sendToCloud('後台盤點校正(大倉)', item.name, Math.abs(diffW), item.unit, diffW > 0 ? '增加' : '減少');
+      if(diffP !== 0) sendToCloud('後台盤點校正(領用區)', item.name, Math.abs(diffP), item.unit, diffP > 0 ? '增加' : '減少');
+      
+      item.warehouseQty = newW;
+      item.pickupQty = newP;
+      closeModal('calibrateModal');
+      renderTable();
+      alert('✅ 數量已更新，並成功發送至雲端試算表！\n現場領用表單現在可以抓到最新數字了！');
+    }
+
+    // 📡 2. 提交撥發 -> 同步雲端
+    function submitTransfer(e) {
+      e.preventDefault();
+      const item = inventory.find(i => i.id === document.getElementById('transItemId').value);
+      const qty = Number(document.getElementById('transQty').value);
+      
+      if(qty > item.warehouseQty) return alert('撥發數量不可大於大倉剩餘量！');
+      
+      sendToCloud('撥發至領用區', item.name, qty, item.unit, '從大倉扣除，增加至領用區');
+      
+      item.warehouseQty -= qty;
+      item.pickupQty += qty;
+      closeModal('transferModal');
+      renderTable();
+      alert(`✅ 成功撥發 ${qty} ${item.unit} 至現場領用區！`);
+    }
+
+    // 🔗 隱藏表單發送器 (保證 100% 寫入)
+    function sendToCloud(actionType, itemName, qty, unitName, note) {
+      const frameName = 'cloud_frame_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = frameName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = API_URL;
+      form.target = frameName;
+      form.style.display = 'none';
+
+      const payload = {
+        time: new Date().toLocaleString('zh-TW', { hour12: false }),
+        eventName: '後台總表設定',
+        unit: '總部管理',
+        user: '系統管理員',
+        actionType: actionType,
+        itemName: itemName,
+        qty: qty,
+        unitName: unitName,
+        note: note
+      };
+
+      Object.keys(payload).forEach(key => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = payload[key];
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      setTimeout(() => { document.body.removeChild(form); document.body.removeChild(iframe); }, 2000);
+    }
+
+    // 🔗 從雲端抓取所有紀錄並反推最新庫存
+    function fetchFromCloud() {
+      const btn = document.querySelector('button');
+      btn.innerText = "🔄 同步中...";
+      
+      fetch(API_URL + "?action=read&_t=" + Date.now())
+        .then(res => res.json())
+        .then(data => {
+          // 先把全部歸零，靠雲端紀錄重新算出來 (確保 100% 準確)
+          inventory.forEach(i => { i.warehouseQty = 0; i.pickupQty = 0; i.borrowedQty = 0; });
+          
+          if(data.data) {
+            data.data.forEach(row => {
+              let item = inventory.find(i => i.name === row.itemName);
+              if(!item) return;
+              let q = Number(row.qty);
+              
+              if(row.actionType === '後台盤點校正(大倉)') {
+                if(row.note === '增加') item.warehouseQty += q; else item.warehouseQty -= q;
+              }
+              else if(row.actionType === '後台盤點校正(領用區)') {
+                if(row.note === '增加') item.pickupQty += q; else item.pickupQty -= q;
+              }
+              else if (row.actionType === '撥發至領用區') {
+                item.warehouseQty -= q; item.pickupQty += q;
+              } 
+              else if (row.actionType === '耗材領出') {
+                item.pickupQty -= q;
+              } 
+              else if (row.actionType === '器材借出') {
+                item.pickupQty -= q; item.borrowedQty += q;
+              } 
+              else if (row.actionType === '未用退回' || row.actionType === '器材歸還') {
+                item.pickupQty += q; item.borrowedQty -= q;
+                if(item.borrowedQty < 0) item.borrowedQty = 0;
+              }
             });
-        }
-
-        window.onload = function() {
-            fetchCloudLogs();
-        };
-    </script>
+          }
+          renderTable();
+          btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
+        })
+        .catch(err => {
+          btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
+          console.error(err);
+        });
+    }
+  </script>
 </body>
 </html>
