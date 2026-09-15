@@ -1,299 +1,295 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>現場物資領用登記站</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
-    .fade-in { animation: fadeIn 0.3s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>現場手機領用站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen pb-10">
-
-  <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-slate-200">
-    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">🛡️</span>
-        <h1 class="text-lg font-black text-slate-800 tracking-wide">防護物資領用站</h1>
-      </div>
-      <div class="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="text-[11px] font-bold text-emerald-700">雲端連線中</span>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-md mx-auto px-4 mt-5 fade-in">
-    <form id="pickupForm" onsubmit="submitForm(event)" class="space-y-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-      
-      <!-- 活動專案 -->
-      <div>
-        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">🎯 當前活動專案</label>
-        <select id="eventName" required onchange="renderItemSelect()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-          <option value="115全民運">115全民運</option>
-          <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
-          <option value="桃園計畫隨隊">桃園計畫隨隊</option>
-          <option value="其他專案活動">其他專案活動</option>
-        </select>
-      </div>
-
-      <!-- 單位與人員 -->
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">🏢 借領單位/組別</label>
-          <input type="text" id="unit" required placeholder="如: 田徑組" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+<body class="bg-slate-50 min-h-screen text-slate-800">
+    <header class="bg-teal-600 text-white shadow-md p-4 sticky top-0 z-10 flex justify-between items-center">
+        <h1 class="text-xl font-bold">🛡️ 現場物資領用站</h1>
+        <div class="text-xs bg-teal-800 px-2 py-1 rounded-full flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> 已連線
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">👤 登記人員</label>
-          <input type="text" id="user" required placeholder="您的姓名" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-        </div>
-      </div>
+    </header>
 
-      <div class="pt-2 border-t border-slate-100">
-        <div class="flex justify-between items-end mb-1.5">
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">📦 選擇物資品項</label>
-          <span id="syncStatusText" class="text-[10px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded">🔄 抓取最新庫存中...</span>
-        </div>
-        <!-- 這裡的選單會在讀取雲端後自動補上現貨數量 -->
-        <select id="itemName" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition mb-4">
-          <option value="" disabled selected>請先等待載入清單...</option>
-        </select>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">🔄 異動類型</label>
-            <select id="actionType" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-              <option value="耗材領出">耗材領出 (消耗)</option>
-              <option value="器材借出">器材借出 (未還)</option>
-              <option value="歸還/退回">歸還 / 退回庫存</option>
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <label class="block text-sm font-bold text-slate-700 mb-2">🎯 當前活動專案 *</label>
+            <select id="inputEvent" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-teal-700 outline-none focus:ring-2 focus:ring-teal-500" onchange="fetchItemsFromCloud()">
+                <option value="115全民運">115全民運</option>
+                <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+                <option value="桃園計畫隨隊">桃園計畫隨隊</option>
             </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">🔢 數量</label>
-            <input type="number" id="qty" required min="1" value="1" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-lg text-center font-black rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-          </div>
         </div>
-      </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">📝 備註說明 (選填)</label>
-        <input type="text" id="note" placeholder="例如：防護站補充、特定選手使用" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-      </div>
+        <form onsubmit="submitForm(event)" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">借領單位/組別 *</label>
+                    <input type="text" id="inputUnit" required placeholder="例：田徑組" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">登記人姓名 *</label>
+                    <input type="text" id="inputUser" required placeholder="例：林防護員" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                </div>
+            </div>
 
-      <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black text-lg py-4 rounded-xl shadow-lg shadow-teal-500/30 transition-all flex justify-center items-center gap-2 mt-4">
-        <span>📤</span>
-        <span>確認送出登記</span>
-      </button>
-    </form>
-  </main>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">動作類型 *</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="actionType" value="checkout" checked class="peer sr-only" onchange="currentMode='checkout'">
+                        <div class="text-center py-2 rounded-lg border border-slate-300 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600 font-bold text-sm transition-all">領出 / 借出</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="actionType" value="return" class="peer sr-only" onchange="currentMode='return'">
+                        <div class="text-center py-2 rounded-lg border border-slate-300 peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500 font-bold text-sm transition-all">退回 / 歸還</div>
+                    </label>
+                </div>
+            </div>
 
-  <script>
-    // 🔗 永久寫死您的最新 API 網址
-    const API_URL = "https://script.google.com/macros/s/AKfycby2Zn8aQivYlJW9gCPScQ6yd9H-7cc-qFt-2_CN-oHAtf1XJ8cYwIU6n18dU4mOh0Tx/exec";
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">選擇品項 * <span id="itemLoading" class="text-teal-600 font-normal">🔄 連線雲端抓取清單中...</span></label>
+                <select id="inputItem" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-teal-500">
+                    <option value="">-- 請等待清單載入 --</option>
+                </select>
+            </div>
 
-    // 完整的品項分類基底資料
-    const baseItems = [
-      { name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷' },
-      { name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷' },
-      { name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
-      { name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
-      { name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷' },
-      { name: '肌內效貼布', category: '貼紮用品', unit: '卷' },
-      { name: '膚色自黏貼布', category: '貼紮用品', unit: '卷' },
-      { name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷' },
-      { name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷' },
-      { name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷' },
-      { name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷' },
-      { name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片' },
-      { name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片' },
-      { name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片' },
-      { name: '鼻血止血棉棒', category: '外傷處理', unit: '支' },
-      { name: '酒精棉片', category: '外傷處理', unit: '片' },
-      { name: '優碘棉片', category: '外傷處理', unit: '片' },
-      { name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片' },
-      { name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片' },
-      { name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶' },
-      { name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷' },
-      { name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包' },
-      { name: '檢診手套(無粉)', category: '外傷處理', unit: '隻' },
-      { name: '乾洗手', category: '外傷處理', unit: '瓶' },
-      { name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包' },
-      { name: '冰敷用塑膠袋', category: '其它', unit: '包' },
-      { name: '冰敷膠膜', category: '其它', unit: '卷' },
-      { name: '熱身用運動軟膏', category: '其它', unit: '瓶' },
-      { name: '4 吋加長型彈繃', category: '其它', unit: '卷' },
-      { name: '防護包', category: '非耗材(器材)', unit: '個' },
-      { name: '冰桶-大', category: '非耗材(器材)', unit: '個' },
-      { name: '冰桶-中', category: '非耗材(器材)', unit: '個' },
-      { name: '可調式頸圈', category: '非耗材(器材)', unit: '個' },
-      { name: '折疊處理床', category: '非耗材(器材)', unit: '個' },
-      { name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷' },
-      { name: '三折式關節夾板', category: '非耗材(器材)', unit: '個' },
-      { name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條' }
-    ];
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">數量 *</label>
+                <input type="number" id="inputQty" required min="1" value="1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold text-center outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">備註說明 (選填)</label>
+                <input type="text" id="inputNote" placeholder="例：特殊用途" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
 
-    let inventoryCache = {};
-    let globalLogs = []; // 新增：用來儲存從雲端抓下來的所有紀錄
+            <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg shadow-md transition-all">
+                確認送出登記
+            </button>
+        </form>
+    </main>
 
-    // 網頁載入時，自動抓取最新的現貨數量
-    window.onload = function() {
-      fetchInventory();
-    };
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50 text-sm font-bold text-center whitespace-nowrap">
+        Message
+    </div>
 
-    function fetchInventory() {
-      const cbName = 'jsonp_init_' + Date.now();
-      const script = document.createElement('script');
-      script.src = `${API_URL}?callback=${cbName}&_t=${Date.now()}`;
-
-      window[cbName] = function(res) {
-        delete window[cbName];
-        document.body.removeChild(script);
-
-        if (res && res.status === "success" && res.data) {
-          globalLogs = res.data; // 將所有雲端紀錄存起來
-          
-          // --- 新增：動態從雲端萃取活動名稱，更新下拉選單 ---
-          const eventSelect = document.getElementById('eventName');
-          const currentVal = eventSelect.value;
-          const defaultEvents = ["115全民運", "苗栗計畫隨隊", "桃園計畫隨隊", "其他專案活動"];
-          const logEvents = globalLogs.map(log => log.eventName).filter(e => e && e !== '所有計畫總表');
-          const allEvents = [...new Set([...defaultEvents, ...logEvents])]; // 去除重複的專案
-          
-          eventSelect.innerHTML = '';
-          allEvents.forEach(ev => {
-             const opt = document.createElement('option');
-             opt.value = ev;
-             opt.innerText = ev;
-             eventSelect.appendChild(opt);
-          });
-          
-          if (allEvents.includes(currentVal)) {
-              eventSelect.value = currentVal;
-          }
-          // ----------------------------------------------------
-        }
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycby2Zn8aQivYlJW9gCPScQ6yd9H-7cc-qFt-2_CN-oHAtf1XJ8cYwIU6n18dU4mOh0Tx/exec";
+        let currentMode = 'checkout';
         
-        // 根據當前選擇的活動，計算現貨並渲染選單
-        renderItemSelect();
-        document.getElementById('syncStatusText').innerText = "✅ 已取得最新現貨數量";
-      };
-
-      document.body.appendChild(script);
-    }
-
-    // 將包含現貨數量的品項渲染到下拉選單 (加入活動篩選邏輯)
-    function renderItemSelect() {
-      const select = document.getElementById('itemName');
-      const currentEvent = document.getElementById('eventName').value;
-      
-      // 初始化庫存為 0
-      inventoryCache = {};
-      baseItems.forEach(i => inventoryCache[i.name] = 0);
-      
-      // 只有屬於「當前選擇活動」的紀錄才進行計算
-      globalLogs.filter(log => log.eventName === currentEvent).forEach(log => {
-        let q = Number(log.qty);
-        if (inventoryCache[log.itemName] !== undefined) {
-          if (log.actionType === '後台盤點校正(領用區)' && log.note === '增加') inventoryCache[log.itemName] += q;
-          else if (log.actionType === '後台盤點校正(領用區)' && log.note === '減少') inventoryCache[log.itemName] -= q;
-          else if (log.actionType === '撥發至領用區') inventoryCache[log.itemName] += q;
-          else if (log.actionType === '耗材領出' || log.actionType === '器材借出') inventoryCache[log.itemName] -= q;
-          else if (log.actionType === '未用退回' || log.actionType === '器材歸還' || log.actionType === '歸還/退回') inventoryCache[log.itemName] += q;
-        }
-      });
-
-      let html = '<option value="" disabled selected>請選擇領用物資...</option>';
-      
-      const categories = [...new Set(baseItems.map(i => i.category))];
-      categories.forEach(cat => {
-        html += `<optgroup label="🏷️ ${cat}">`;
-        baseItems.filter(i => i.category === cat).forEach(item => {
-          let currentQty = inventoryCache[item.name] || 0;
-          let displayQty = currentQty > 0 ? currentQty : 0; // 防止負數顯示
-          html += `<option value="${item.name}">${item.name} (現貨: ${displayQty} ${item.unit})</option>`;
-        });
-        html += `</optgroup>`;
-      });
-      
-      select.innerHTML = html;
-    }
-
-    function submitForm(e) {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      const itemSelect = document.getElementById('itemName');
-      
-      if (!itemSelect.value) {
-        alert("⚠️ 請選擇要領用的物資品項！");
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = `<span class="animate-spin">🔄</span> 資料同步中...`;
-
-      // 取得選擇品項的單位
-      const selectedItem = baseItems.find(i => i.name === itemSelect.value);
-      
-      // 自動判斷歸還的類型是耗材還是器材，以利總表精確對帳
-      let finalActionType = document.getElementById('actionType').value;
-      if (finalActionType === '歸還/退回') {
-         finalActionType = (selectedItem && selectedItem.category === '非耗材(器材)') ? '器材歸還' : '未用退回';
-      }
-
-      const payload = {
-        action: 'add',
-        time: new Date().toLocaleString('zh-TW', { hour12: false }),
-        eventName: document.getElementById('eventName').value,
-        unit: document.getElementById('unit').value.trim(),
-        user: document.getElementById('user').value.trim(),
-        actionType: finalActionType,
-        itemName: itemSelect.value,
-        qty: document.getElementById('qty').value,
-        unitName: selectedItem ? selectedItem.unit : '件',
-        note: document.getElementById('note').value.trim(),
-        _t: Date.now()
-      };
-
-      // 透過 JSONP 將資料安全穿透寫入 Google 試算表
-      const cbName = 'tx_submit_' + Math.round(Math.random() * 1000000);
-      const queryStr = Object.keys(payload).map(k => `${k}=${encodeURIComponent(payload[k])}`).join('&');
-      const script = document.createElement('script');
-      script.src = `${API_URL}?${queryStr}&callback=${cbName}`;
-
-      window[cbName] = function(res) {
-        delete window[cbName];
-        document.body.removeChild(script);
-        btn.disabled = false;
-        btn.innerHTML = `<span>📤</span> <span>確認送出登記</span>`;
+        const baseItems = [
+            { name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '肌內效貼布', category: '貼紮用品', unit: '卷' },
+            { name: '膚色自黏貼布', category: '貼紮用品', unit: '卷' },
+            { name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷' },
+            { name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷' },
+            { name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷' },
+            { name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷' },
+            { name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片' },
+            { name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片' },
+            { name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片' },
+            { name: '鼻血止血棉棒', category: '外傷處理', unit: '支' },
+            { name: '酒精棉片', category: '外傷處理', unit: '片' },
+            { name: '優碘棉片', category: '外傷處理', unit: '片' },
+            { name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片' },
+            { name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片' },
+            { name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶' },
+            { name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷' },
+            { name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包' },
+            { name: '檢診手套(無粉)', category: '外傷處理', unit: '隻' },
+            { name: '乾洗手', category: '外傷處理', unit: '瓶' },
+            { name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包' },
+            { name: '冰敷用塑膠袋', category: '其它', unit: '包' },
+            { name: '冰敷膠膜', category: '其它', unit: '卷' },
+            { name: '熱身用運動軟膏', category: '其它', unit: '瓶' },
+            { name: '4 吋加長型彈繃', category: '其它', unit: '卷' },
+            { name: '防護包', category: '非耗材(器材)', unit: '個' },
+            { name: '冰桶-大', category: '非耗材(器材)', unit: '個' },
+            { name: '冰桶-中', category: '非耗材(器材)', unit: '個' },
+            { name: '可調式頸圈', category: '非耗材(器材)', unit: '個' },
+            { name: '折疊處理床', category: '非耗材(器材)', unit: '個' },
+            { name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷' },
+            { name: '三折式關節夾板', category: '非耗材(器材)', unit: '個' },
+            { name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條' }
+        ];
         
-        if (res && res.status === "success") {
-            alert(`✅ 登記成功！\n\n已將 [${payload.itemName} x ${payload.qty}] 同步至總部。`);
-            // 重置部分表單
-            itemSelect.value = '';
-            document.getElementById('qty').value = '1';
-            document.getElementById('note').value = '';
-            // 重新抓取最新數量
-            document.getElementById('syncStatusText').innerText = "🔄 重新計算庫存...";
-            fetchInventory();
-        } else {
-            alert("⚠️ 雲端寫入失敗，請確認網路連線！");
+        let allItems = [];
+
+        window.onload = function() {
+            fetchItemsFromCloud();
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100', '-translate-y-4');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+                toast.classList.remove('opacity-100', '-translate-y-4');
+            }, 3000);
         }
-      };
 
-      script.onerror = function() {
-        delete window[cbName];
-        document.body.removeChild(script);
-        btn.disabled = false;
-        btn.innerHTML = `<span>📤</span> <span>確認送出登記</span>`;
-        alert("⚠️ 網路連線異常，無法連上 Google 雲端！");
-      };
+        function fetchItemsFromCloud() {
+            const currentEvent = document.getElementById('inputEvent').value;
+            const cbName = 'jsonp_cb_' + Date.now();
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=read&callback=${cbName}`;
+            
+            document.getElementById('itemLoading').innerText = "🔄 同步中...";
+            
+            window[cbName] = function(res) {
+                delete window[cbName];
+                document.body.removeChild(script);
+                
+                let activeItems = baseItems.map(item => ({ ...item, pickupQty: 0 }));
+                let uniqueEvents = new Set(["115全民運", "苗栗計畫隨隊", "桃園計畫隨隊"]);
+                
+                if(res && res.data) {
+                    // Extract dynamic events
+                    res.data.forEach(log => {
+                        if(log.eventName && log.eventName !== '所有計畫總表') {
+                            uniqueEvents.add(log.eventName);
+                        }
+                    });
+                    
+                    // Extract new items
+                    res.data.forEach(log => {
+                        if (log.actionType === '新增品項設定') {
+                            let parts = (log.note || '其它|件').split('|');
+                            if (!activeItems.find(i => i.name === log.itemName)) {
+                                activeItems.push({ name: log.itemName, category: parts[0], unit: parts[1], pickupQty: 0 });
+                            }
+                        }
+                    });
 
-      document.body.appendChild(script);
-    }
-  </script>
+                    // Calculate pickupQty for the CURRENT event
+                    res.data.forEach(log => {
+                        if (log.eventName !== currentEvent && log.eventName !== '所有計畫總表') return; // Only process current event
+                        
+                        let item = activeItems.find(i => i.name === log.itemName);
+                        if(!item) return;
+                        
+                        let q = Number(log.qty);
+                        if (log.actionType === '後台盤點校正(領用區)') {
+                            item.pickupQty += (log.note === '減少' ? -q : q);
+                        } else if (log.actionType === '撥發至領用區') {
+                            item.pickupQty += q;
+                        } else if (log.actionType === '耗材領出' || log.actionType === '器材借出') {
+                            item.pickupQty -= q;
+                        } else if (log.actionType === '未使用退回' || log.actionType === '器材歸還' || log.actionType === '未用退回') {
+                            item.pickupQty += q;
+                        }
+                    });
+                }
+                
+                allItems = activeItems;
+                updateEventSelect(Array.from(uniqueEvents), currentEvent);
+                renderItemSelect(activeItems);
+            };
+            
+            script.onerror = function() {
+                allItems = baseItems.map(item => ({ ...item, pickupQty: 0 }));
+                renderItemSelect(allItems);
+                document.getElementById('itemLoading').innerText = "⚠️ 連線失敗，顯示預設";
+            };
+            document.body.appendChild(script);
+        }
+
+        function updateEventSelect(events, selectedEvent) {
+            const select = document.getElementById('inputEvent');
+            select.innerHTML = events.map(e => `<option value="${e}" ${e === selectedEvent ? 'selected' : ''}>${e}</option>`).join('');
+        }
+
+        function renderItemSelect(items) {
+            const select = document.getElementById('inputItem');
+            let html = '<option value="">-- 請選擇防護物資 --</option>';
+            
+            const categories = [...new Set(items.map(i => i.category))];
+            categories.forEach(cat => {
+                html += `<optgroup label="🔖 ${cat}">`;
+                items.filter(i => i.category === cat).forEach(item => {
+                    html += `<option value="${item.name}">${item.name} (現貨: ${item.pickupQty} ${item.unit})</option>`;
+                });
+                html += `</optgroup>`;
+            });
+            
+            select.innerHTML = html;
+            document.getElementById('itemLoading').innerText = "✅ 載入完成";
+        }
+
+        function submitForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "🚀 送出中...";
+
+            const itemName = document.getElementById('inputItem').value;
+            const itemObj = allItems.find(i => i.name === itemName);
+            const isEquip = itemObj && itemObj.category === '非耗材(器材)';
+            
+            let actionText = '';
+            if (currentMode === 'checkout') actionText = isEquip ? '器材借出' : '耗材領出';
+            if (currentMode === 'return') actionText = isEquip ? '器材歸還' : '未使用退回';
+
+            const payload = {
+                time: new Date().toLocaleString('zh-TW', { hour12: false }),
+                eventName: document.getElementById('inputEvent').value,
+                unit: document.getElementById('inputUnit').value,
+                user: document.getElementById('inputUser').value,
+                actionType: actionText,
+                itemName: itemName,
+                qty: document.getElementById('inputQty').value,
+                unitName: itemObj ? itemObj.unit : '件',
+                note: document.getElementById('inputNote').value
+            };
+
+            const frameName = 'cloud_frame_' + Date.now();
+            const iframe = document.createElement('iframe');
+            iframe.name = frameName;
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = API_URL;
+            form.target = frameName;
+            form.style.display = 'none';
+
+            Object.keys(payload).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = payload[key];
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+
+            setTimeout(() => { 
+                document.body.removeChild(form); 
+                document.body.removeChild(iframe); 
+                btn.disabled = false;
+                btn.innerText = "確認送出登記";
+                
+                showToast(`✅ ${payload.itemName} 成功${currentMode === 'checkout' ? '借/領出' : '退/歸還'}！`);
+                document.getElementById('inputItem').value = '';
+                document.getElementById('inputQty').value = '1';
+                document.getElementById('inputNote').value = '';
+                
+                // Refresh inventory immediately
+                fetchItemsFromCloud();
+            }, 1500);
+        }
+    </script>
 </body>
 </html>
