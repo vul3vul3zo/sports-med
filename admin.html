@@ -9,185 +9,341 @@
     body { font-family: 'Helvetica Neue', Arial, sans-serif; }
     .fade-in { animation: fadeIn 0.3s ease-in-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-active { border-bottom: 4px solid #0d9488; color: #0d9488; font-weight: bold; }
+    .tab-inactive { color: #64748b; font-weight: 600; }
+    .tab-inactive:hover { color: #0f766e; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col">
 
   <!-- 頂部導覽列 -->
-  <header class="bg-slate-900 text-white shadow-md z-10">
+  <header class="bg-slate-900 text-white shadow-md z-10 flex-shrink-0">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <span class="text-2xl">🛡️</span>
         <h1 class="text-lg font-bold tracking-wide">防護物資總管後台</h1>
       </div>
       <div class="flex items-center gap-4">
-        <button onclick="fetchFromCloud()" class="bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg transition-all">
+        <div class="bg-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2 border border-slate-700">
+          <span class="text-xs text-slate-400 font-bold">當前活動:</span>
+          <select id="eventSelect" onchange="changeEvent()" class="bg-transparent text-sm font-bold text-white outline-none cursor-pointer">
+            <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+            <option value="桃園計畫隨隊">桃園計畫隨隊</option>
+          </select>
+        </div>
+        <button onclick="fetchFromCloud()" id="syncBtn" class="bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg transition-all">
           <span>⚡</span> 從雲端同步刷新
         </button>
       </div>
     </div>
   </header>
 
-  <!-- 內容區 -->
-  <main class="flex-1 overflow-auto p-4 md:p-6 fade-in max-w-7xl mx-auto w-full space-y-6">
+  <!-- 頁籤導覽 -->
+  <div class="bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+    <div class="max-w-7xl mx-auto px-4 flex gap-6 overflow-x-auto">
+      <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-active py-4 px-2 text-sm transition whitespace-nowrap">📊 庫存與校正</button>
+      <button onclick="switchTab('reconciliation')" id="tab-reconciliation" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap">🏢 單位領還對帳</button>
+      <button onclick="switchTab('logs')" id="tab-logs" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap">📑 流水明細</button>
+      <button onclick="openNewEventModal()" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap">➕ 新增活動專案</button>
+    </div>
+  </div>
+
+  <!-- 主要內容區 -->
+  <main class="flex-1 overflow-auto p-4 md:p-6 max-w-7xl mx-auto w-full">
     
-    <!-- 統計看板 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <div class="text-sm text-slate-500 font-bold mb-1">主庫存 (大倉) 總耗材數</div>
-        <div class="text-3xl font-black text-indigo-600" id="totalWarehouse">0</div>
+    <!-- 頁籤 1: 庫存與校正 -->
+    <div id="view-inventory" class="fade-in space-y-6 block">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-sm text-slate-500 font-bold mb-1">主庫存 (大倉) 總耗材數</div>
+          <div class="text-3xl font-black text-indigo-600" id="totalWarehouse">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-sm text-slate-500 font-bold mb-1">領用區現貨 (供前線取用)</div>
+          <div class="text-3xl font-black text-teal-600" id="totalPickup">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-sm text-slate-500 font-bold mb-1">器材外借中 (未歸還)</div>
+          <div class="text-3xl font-black text-amber-600" id="totalBorrowed">0</div>
+        </div>
       </div>
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <div class="text-sm text-slate-500 font-bold mb-1">領用區現貨 (供前線取用)</div>
-        <div class="text-3xl font-black text-teal-600" id="totalPickup">0</div>
-      </div>
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <div class="text-sm text-slate-500 font-bold mb-1">器材外借中 (未歸還)</div>
-        <div class="text-3xl font-black text-amber-600" id="totalBorrowed">0</div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">📦 <span id="inventoryTitleEvent">苗栗計畫隨隊</span> - 庫存總表</h2>
+            <p class="text-xs text-slate-500 mt-1">點擊右側「✏️ 校正」可直接寫入初始數量</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                <th class="py-3 px-4">分類</th>
+                <th class="py-3 px-4">物資品項</th>
+                <th class="py-3 px-4 text-center">主庫存 (大倉)</th>
+                <th class="py-3 px-4 text-center">領用區現貨</th>
+                <th class="py-3 px-4 text-center">外借中</th>
+                <th class="py-3 px-4 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- 庫存清單區塊 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-        <div>
-          <h2 class="text-lg font-bold text-slate-800">📦 全場庫存總表</h2>
-          <p class="text-xs text-slate-500 mt-1">請點擊右側「✏️ 校正數量」來 Key 入初始倉庫數字或盤點修改</p>
+    <!-- 頁籤 2: 單位領還對帳 -->
+    <div id="view-reconciliation" class="fade-in hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">🏢 各單位領還與結算對帳單</h2>
+        <div id="reconciliationContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 動態生成單位卡片 -->
         </div>
       </div>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-              <th class="py-3 px-4">分類</th>
-              <th class="py-3 px-4">物資品項</th>
-              <th class="py-3 px-4 text-center">主庫存 (大倉)</th>
-              <th class="py-3 px-4 text-center">領用區現貨</th>
-              <th class="py-3 px-4 text-center">外借中</th>
-              <th class="py-3 px-4 text-center">操作 (填寫數量/調度)</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTableBody" class="divide-y divide-slate-100">
-            <!-- 動態渲染清單 -->
-          </tbody>
-        </table>
+    </div>
+
+    <!-- 頁籤 3: 流水明細 -->
+    <div id="view-logs" class="fade-in hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-slate-800">📑 全場雲端流水帳</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                <th class="py-3 px-4">時間</th>
+                <th class="py-3 px-4">活動</th>
+                <th class="py-3 px-4">單位/人員</th>
+                <th class="py-3 px-4">動作</th>
+                <th class="py-3 px-4">品項</th>
+                <th class="py-3 px-4">數量</th>
+                <th class="py-3 px-4">備註</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
 
-  <!-- 彈跳視窗：填寫 / 校正數量 -->
+  <!-- Modal: 校正數量 -->
   <div id="calibrateModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
-      <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>✏️</span> 填寫 / 校正庫存數量
-      </h3>
-      <p class="text-sm font-bold text-indigo-600 mb-4" id="calItemName">品項名稱</p>
-      
+      <h3 class="text-lg font-bold text-slate-800 mb-4">✏️ 填寫 / 校正庫存數量</h3>
+      <p class="text-sm font-bold text-indigo-600 mb-4" id="calItemName"></p>
       <form onsubmit="submitCalibrate(event)" class="space-y-4">
         <input type="hidden" id="calItemId">
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">主庫存大倉 數量</label>
-          <input type="number" id="calWarehouseQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500">
+          <input type="number" id="calWarehouseQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">現場領用區 數量</label>
-          <input type="number" id="calPickupQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500">
+          <input type="number" id="calPickupQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500">
         </div>
-        
         <div class="flex gap-2 pt-4">
-          <button type="button" onclick="closeModal('calibrateModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-bold transition">取消</button>
-          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold shadow-md transition">確認送出雲端</button>
+          <button type="button" onclick="closeModal('calibrateModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold">取消</button>
+          <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold">確認送出雲端</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- 彈跳視窗：撥發調度 -->
+  <!-- Modal: 撥發 -->
   <div id="transferModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
-      <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>🔄</span> 撥發至領用區
-      </h3>
-      <p class="text-sm font-bold text-teal-600 mb-2" id="transItemName">品項名稱</p>
-      <p class="text-xs text-slate-500 mb-4">大倉目前剩餘: <span id="transAvailable" class="font-bold text-slate-800">0</span></p>
-      
+      <h3 class="text-lg font-bold text-slate-800 mb-4">🔄 撥發至領用區</h3>
+      <p class="text-sm font-bold text-teal-600 mb-2" id="transItemName"></p>
+      <p class="text-xs text-slate-500 mb-4">大倉目前剩餘: <span id="transAvailable" class="font-bold text-slate-800"></span></p>
       <form onsubmit="submitTransfer(event)" class="space-y-4">
         <input type="hidden" id="transItemId">
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">本次撥發數量</label>
-          <input type="number" id="transQty" min="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500">
+          <input type="number" id="transQty" min="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500">
         </div>
-        
         <div class="flex gap-2 pt-4">
-          <button type="button" onclick="closeModal('transferModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-bold transition">取消</button>
-          <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-bold shadow-md transition">確認撥發</button>
+          <button type="button" onclick="closeModal('transferModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold">取消</button>
+          <button type="submit" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-bold">確認撥發</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: 新增活動 -->
+  <div id="newEventModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+      <h3 class="text-lg font-bold text-slate-800 mb-4">➕ 新增活動專案</h3>
+      <form onsubmit="submitNewEvent(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">活動名稱</label>
+          <input type="text" id="newEventName" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500" placeholder="例如：全中運防護支援">
+        </div>
+        <div class="flex gap-2 pt-4">
+          <button type="button" onclick="closeModal('newEventModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold">取消</button>
+          <button type="submit" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-bold">新增活動</button>
         </div>
       </form>
     </div>
   </div>
 
   <script>
-    // 🔗 您專屬的 Google Apps Script API 網址 (已寫死)
+    // 🔗 您專屬的 Google API 網址 (已寫死)
     const API_URL = "https://script.google.com/macros/s/AKfycby2Zn8aQivYlJW9gCPScQ6yd9H-7cc-qFt-2_CN-oHAtf1XJ8cYwIU6n18dU4mOh0Tx/exec";
 
-    // 📦 預設初始清單 (全部歸零)
-    const inventory = [
-      { id: 't01', name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't02', name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't03', name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't04', name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't05', name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't06', name: '肌內效貼布', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't07', name: '膚色自黏貼布', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't08', name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't09', name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't10', name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't11', name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't12', name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 't13', name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      
-      { id: 'w01', name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w02', name: '鼻血止血棉棒', category: '外傷處理', unit: '支', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w03', name: '酒精棉片', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w04', name: '優碘棉片', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w05', name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w06', name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w07', name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w08', name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w09', name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w10', name: '檢診手套(無粉)', category: '外傷處理', unit: '隻', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w11', name: '乾洗手', category: '外傷處理', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'w12', name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      
-      { id: 'o01', name: '冰敷用塑膠袋', category: '其它', unit: '包', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'o02', name: '冰敷膠膜', category: '其它', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'o03', name: '熱身用運動軟膏', category: '其它', unit: '瓶', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'o04', name: '4 吋加長型彈繃', category: '其它', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      
-      { id: 'e01', name: '防護包', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e02', name: '冰桶-大', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e03', name: '冰桶-中', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e04', name: '可調式頸圈', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e05', name: '折疊處理床', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e06', name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e07', name: '三折式關節夾板', category: '非耗材(器材)', unit: '個', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 },
-      { id: 'e08', name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條', warehouseQty: 0, pickupQty: 0, borrowedQty: 0 }
+    // 📋 基礎品項清單
+    const baseItems = [
+      { id: 't1', name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷' },
+      { id: 't2', name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷' },
+      { id: 't3', name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+      { id: 't4', name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+      { id: 't5', name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷' },
+      { id: 't6', name: '肌內效貼布', category: '貼紮用品', unit: '卷' },
+      { id: 't7', name: '膚色自黏貼布', category: '貼紮用品', unit: '卷' },
+      { id: 't8', name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷' },
+      { id: 't9', name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷' },
+      { id: 't10', name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷' },
+      { id: 't11', name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷' },
+      { id: 't12', name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片' },
+      { id: 't13', name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片' },
+      { id: 'w1', name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片' },
+      { id: 'w2', name: '鼻血止血棉棒', category: '外傷處理', unit: '支' },
+      { id: 'w3', name: '酒精棉片', category: '外傷處理', unit: '片' },
+      { id: 'w4', name: '優碘棉片', category: '外傷處理', unit: '片' },
+      { id: 'w5', name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片' },
+      { id: 'w6', name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片' },
+      { id: 'w7', name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶' },
+      { id: 'w8', name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷' },
+      { id: 'w9', name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包' },
+      { id: 'w10', name: '檢診手套(無粉)', category: '外傷處理', unit: '隻' },
+      { id: 'w11', name: '乾洗手', category: '外傷處理', unit: '瓶' },
+      { id: 'w12', name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包' },
+      { id: 'o1', name: '冰敷用塑膠袋', category: '其它', unit: '包' },
+      { id: 'o2', name: '冰敷膠膜', category: '其它', unit: '卷' },
+      { id: 'o3', name: '熱身用運動軟膏', category: '其它', unit: '瓶' },
+      { id: 'o4', name: '4 吋加長型彈繃', category: '其它', unit: '卷' },
+      { id: 'e1', name: '防護包', category: '非耗材(器材)', unit: '個' },
+      { id: 'e2', name: '冰桶-大', category: '非耗材(器材)', unit: '個' },
+      { id: 'e3', name: '冰桶-中', category: '非耗材(器材)', unit: '個' },
+      { id: 'e4', name: '可調式頸圈', category: '非耗材(器材)', unit: '個' },
+      { id: 'e5', name: '折疊處理床', category: '非耗材(器材)', unit: '個' },
+      { id: 'e6', name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷' },
+      { id: 'e7', name: '三折式關節夾板', category: '非耗材(器材)', unit: '個' },
+      { id: 'e8', name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條' }
     ];
 
-    // 初始化網頁：從雲端抓取紀錄並計算
+    let currentEvent = "苗栗計畫隨隊";
+    let globalLogs = [];
+    let currentInventory = [];
+
+    // 初始化網頁
     window.onload = function() {
-      renderTable();
       fetchFromCloud();
     };
 
-    function renderTable() {
+    // 頁籤切換
+    function switchTab(tabId) {
+      ['inventory', 'reconciliation', 'logs'].forEach(id => {
+        document.getElementById(`view-${id}`).classList.add('hidden');
+        document.getElementById(`tab-${id}`).className = 'tab-inactive py-4 px-2 text-sm transition whitespace-nowrap';
+      });
+      document.getElementById(`view-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-${tabId}`).className = 'tab-active py-4 px-2 text-sm transition whitespace-nowrap';
+    }
+
+    // 變更活動
+    function changeEvent() {
+      currentEvent = document.getElementById('eventSelect').value;
+      document.getElementById('inventoryTitleEvent').innerText = currentEvent;
+      processData();
+    }
+
+    function openNewEventModal() { document.getElementById('newEventModal').classList.replace('hidden', 'flex'); }
+    function submitNewEvent(e) {
+      e.preventDefault();
+      const val = document.getElementById('newEventName').value.trim();
+      if(val) {
+        const sel = document.getElementById('eventSelect');
+        sel.add(new Option(val, val));
+        sel.value = val;
+        changeEvent();
+      }
+      closeModal('newEventModal');
+    }
+
+    // 從雲端抓取資料
+    function fetchFromCloud() {
+      const btn = document.getElementById('syncBtn');
+      btn.innerHTML = "🔄 同步中...";
+      
+      const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+      const script = document.createElement('script');
+      script.src = `${API_URL}?callback=${callbackName}&_t=${Date.now()}`;
+
+      window[callbackName] = function(response) {
+        delete window[callbackName];
+        document.body.removeChild(script);
+        if (response && response.status === "success") {
+          globalLogs = response.data || [];
+          processData();
+        }
+        btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
+      };
+      document.body.appendChild(script);
+    }
+
+    // 資料處理核心 (將流水帳轉為庫存與對帳單)
+    function processData() {
+      // 1. 初始化當前活動庫存
+      currentInventory = baseItems.map(item => ({ ...item, warehouseQty: 0, pickupQty: 0, borrowedQty: 0 }));
+      let eventLogs = globalLogs.filter(log => log.eventName === currentEvent);
+      let unitsData = {};
+
+      eventLogs.forEach(log => {
+        let item = currentInventory.find(i => i.name === log.itemName);
+        let q = Number(log.qty);
+        
+        // 處理庫存計算
+        if (item) {
+          if (log.actionType === '後台盤點校正(大倉)') {
+            item.warehouseQty += (log.note === '減少' ? -q : q);
+          } else if (log.actionType === '後台盤點校正(領用區)') {
+            item.pickupQty += (log.note === '減少' ? -q : q);
+          } else if (log.actionType === '撥發至領用區') {
+            item.warehouseQty -= q; item.pickupQty += q;
+          } else if (log.actionType === '耗材領出') {
+            item.pickupQty -= q;
+          } else if (log.actionType === '器材借出') {
+            item.pickupQty -= q; item.borrowedQty += q;
+          } else if (log.actionType === '未使用退回' || log.actionType === '器材歸還') {
+            item.pickupQty += q; item.borrowedQty = Math.max(0, item.borrowedQty - q);
+          }
+        }
+
+        // 處理單位對帳計算 (排除總部後台操作)
+        if (log.unit && log.unit !== '總部管理') {
+          if (!unitsData[log.unit]) unitsData[log.unit] = {};
+          if (!unitsData[log.unit][log.itemName]) unitsData[log.unit][log.itemName] = { out: 0, ret: 0 };
+          
+          if (log.actionType === '耗材領出' || log.actionType === '器材借出') unitsData[log.unit][log.itemName].out += q;
+          if (log.actionType === '未使用退回' || log.actionType === '器材歸還') unitsData[log.unit][log.itemName].ret += q;
+        }
+      });
+
+      renderInventory();
+      renderReconciliation(unitsData);
+      renderLogs();
+    }
+
+    // 渲染庫存表
+    function renderInventory() {
       const tbody = document.getElementById('inventoryTableBody');
       let wSum = 0, pSum = 0, bSum = 0;
       
-      tbody.innerHTML = inventory.map(item => {
+      tbody.innerHTML = currentInventory.map(item => {
         wSum += item.warehouseQty; pSum += item.pickupQty; bSum += item.borrowedQty;
-        
         return `
           <tr class="hover:bg-slate-50 transition">
             <td class="py-3 px-4"><span class="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full font-bold">${item.category}</span></td>
@@ -196,10 +352,8 @@
             <td class="py-3 px-4 text-center font-black text-teal-600">${item.pickupQty}</td>
             <td class="py-3 px-4 text-center font-black text-amber-600">${item.borrowedQty}</td>
             <td class="py-3 px-4 text-center space-x-2">
-              <button onclick="openCalibrateModal('${item.id}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">✏️ 填寫/校正</button>
-              ${item.category !== '非耗材(器材)' ? 
-                `<button onclick="openTransferModal('${item.id}')" class="bg-teal-100 hover:bg-teal-200 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">🔄 撥發</button>` : 
-                ''}
+              <button onclick="openCalibrateModal('${item.id}')" class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold">✏️ 校正</button>
+              ${item.category !== '非耗材(器材)' ? `<button onclick="openTransferModal('${item.id}')" class="bg-teal-100 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold">🔄 撥發</button>` : ''}
             </td>
           </tr>
         `;
@@ -210,9 +364,76 @@
       document.getElementById('totalBorrowed').innerText = bSum;
     }
 
-    // Modal 開關
+    // 渲染對帳表
+    function renderReconciliation(unitsData) {
+      const container = document.getElementById('reconciliationContainer');
+      container.innerHTML = '';
+      
+      if(Object.keys(unitsData).length === 0) {
+        container.innerHTML = `<div class="col-span-full p-4 text-center text-slate-400">目前尚無單位借領紀錄</div>`;
+        return;
+      }
+
+      for (let unit in unitsData) {
+        let detailsHtml = '';
+        for (let itemName in unitsData[unit]) {
+          let itemObj = currentInventory.find(i => i.name === itemName);
+          let d = unitsData[unit][itemName];
+          let net = d.out - d.ret;
+          if (d.out === 0 && d.ret === 0) continue;
+          
+          let statusText = '';
+          if (itemObj && itemObj.category === '非耗材(器材)') {
+            statusText = net > 0 ? `<span class="text-red-500 font-bold">尚欠 ${net} 未還</span>` : `<span class="text-emerald-500">結清歸還</span>`;
+          } else {
+            statusText = `<span class="text-slate-500">消耗 ${net}</span>`;
+          }
+
+          detailsHtml += `
+            <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 text-sm">
+              <span class="font-bold text-slate-700">${itemName}</span>
+              <div class="text-right">
+                <span class="text-xs text-slate-400 mr-2">借/領: ${d.out} | 退/還: ${d.ret}</span>
+                ${statusText}
+              </div>
+            </div>`;
+        }
+
+        container.innerHTML += `
+          <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+            <h3 class="font-bold text-slate-800 text-lg mb-3 flex items-center gap-2">🚩 ${unit}</h3>
+            ${detailsHtml || '<p class="text-xs text-slate-400">無異動紀錄</p>'}
+          </div>
+        `;
+      }
+    }
+
+    // 渲染流水明細
+    function renderLogs() {
+      const tbody = document.getElementById('logsTableBody');
+      const filtered = globalLogs.filter(log => log.eventName === currentEvent).reverse();
+      
+      if(filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">目前活動尚無紀錄</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(row => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2 px-4 text-xs text-slate-500">${row.time}</td>
+          <td class="py-2 px-4 text-xs">${row.eventName}</td>
+          <td class="py-2 px-4 font-bold text-xs">${row.unit}<br><span class="text-slate-400 font-normal">${row.user}</span></td>
+          <td class="py-2 px-4 text-xs font-bold text-indigo-600">${row.actionType}</td>
+          <td class="py-2 px-4 font-bold">${row.itemName}</td>
+          <td class="py-2 px-4 text-center font-bold">${row.qty}</td>
+          <td class="py-2 px-4 text-xs text-slate-400">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal 與發送邏輯
     function openCalibrateModal(id) {
-      const item = inventory.find(i => i.id === id);
+      const item = currentInventory.find(i => i.id === id);
       document.getElementById('calItemId').value = id;
       document.getElementById('calItemName').innerText = item.name;
       document.getElementById('calWarehouseQty').value = item.warehouseQty;
@@ -221,7 +442,7 @@
     }
     
     function openTransferModal(id) {
-      const item = inventory.find(i => i.id === id);
+      const item = currentInventory.find(i => i.id === id);
       document.getElementById('transItemId').value = id;
       document.getElementById('transItemName').innerText = item.name;
       document.getElementById('transAvailable').innerText = item.warehouseQty;
@@ -230,48 +451,37 @@
       document.getElementById('transferModal').classList.replace('hidden', 'flex');
     }
     
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.replace('flex', 'hidden');
-    }
+    function closeModal(modalId) { document.getElementById(modalId).classList.replace('flex', 'hidden'); }
 
-    // 📡 1. 提交填寫/校正數量 -> 同步雲端
     function submitCalibrate(e) {
       e.preventDefault();
-      const item = inventory.find(i => i.id === document.getElementById('calItemId').value);
+      const item = currentInventory.find(i => i.id === document.getElementById('calItemId').value);
       const newW = Number(document.getElementById('calWarehouseQty').value);
       const newP = Number(document.getElementById('calPickupQty').value);
-      
       const diffW = newW - item.warehouseQty;
       const diffP = newP - item.pickupQty;
       
       if(diffW !== 0) sendToCloud('後台盤點校正(大倉)', item.name, Math.abs(diffW), item.unit, diffW > 0 ? '增加' : '減少');
       if(diffP !== 0) sendToCloud('後台盤點校正(領用區)', item.name, Math.abs(diffP), item.unit, diffP > 0 ? '增加' : '減少');
       
-      item.warehouseQty = newW;
-      item.pickupQty = newP;
       closeModal('calibrateModal');
-      renderTable();
-      alert('✅ 數量已更新，並成功發送至雲端試算表！\n現場領用表單現在可以抓到最新數字了！');
+      alert('✅ 數量已校正送出！\n為了確保資料準確，系統將在 2 秒後重新整理雲端資料。');
+      setTimeout(fetchFromCloud, 2000);
     }
 
-    // 📡 2. 提交撥發 -> 同步雲端
     function submitTransfer(e) {
       e.preventDefault();
-      const item = inventory.find(i => i.id === document.getElementById('transItemId').value);
+      const item = currentInventory.find(i => i.id === document.getElementById('transItemId').value);
       const qty = Number(document.getElementById('transQty').value);
-      
       if(qty > item.warehouseQty) return alert('撥發數量不可大於大倉剩餘量！');
       
       sendToCloud('撥發至領用區', item.name, qty, item.unit, '從大倉扣除，增加至領用區');
-      
-      item.warehouseQty -= qty;
-      item.pickupQty += qty;
       closeModal('transferModal');
-      renderTable();
-      alert(`✅ 成功撥發 ${qty} ${item.unit} 至現場領用區！`);
+      alert('✅ 成功撥發！系統將在 2 秒後重新整理資料。');
+      setTimeout(fetchFromCloud, 2000);
     }
 
-    // 🔗 隱藏表單發送器 (保證 100% 寫入)
+    // 發送至 Google 雲端
     function sendToCloud(actionType, itemName, qty, unitName, note) {
       const frameName = 'cloud_frame_' + Date.now();
       const iframe = document.createElement('iframe');
@@ -287,7 +497,7 @@
 
       const payload = {
         time: new Date().toLocaleString('zh-TW', { hour12: false }),
-        eventName: '後台總表設定',
+        eventName: currentEvent,
         unit: '總部管理',
         user: '系統管理員',
         actionType: actionType,
@@ -307,55 +517,7 @@
 
       document.body.appendChild(form);
       form.submit();
-
       setTimeout(() => { document.body.removeChild(form); document.body.removeChild(iframe); }, 2000);
-    }
-
-    // 🔗 從雲端抓取所有紀錄並反推最新庫存
-    function fetchFromCloud() {
-      const btn = document.querySelector('button');
-      btn.innerText = "🔄 同步中...";
-      
-      fetch(API_URL + "?action=read&_t=" + Date.now())
-        .then(res => res.json())
-        .then(data => {
-          // 先把全部歸零，靠雲端紀錄重新算出來 (確保 100% 準確)
-          inventory.forEach(i => { i.warehouseQty = 0; i.pickupQty = 0; i.borrowedQty = 0; });
-          
-          if(data.data) {
-            data.data.forEach(row => {
-              let item = inventory.find(i => i.name === row.itemName);
-              if(!item) return;
-              let q = Number(row.qty);
-              
-              if(row.actionType === '後台盤點校正(大倉)') {
-                if(row.note === '增加') item.warehouseQty += q; else item.warehouseQty -= q;
-              }
-              else if(row.actionType === '後台盤點校正(領用區)') {
-                if(row.note === '增加') item.pickupQty += q; else item.pickupQty -= q;
-              }
-              else if (row.actionType === '撥發至領用區') {
-                item.warehouseQty -= q; item.pickupQty += q;
-              } 
-              else if (row.actionType === '耗材領出') {
-                item.pickupQty -= q;
-              } 
-              else if (row.actionType === '器材借出') {
-                item.pickupQty -= q; item.borrowedQty += q;
-              } 
-              else if (row.actionType === '未用退回' || row.actionType === '器材歸還') {
-                item.pickupQty += q; item.borrowedQty -= q;
-                if(item.borrowedQty < 0) item.borrowedQty = 0;
-              }
-            });
-          }
-          renderTable();
-          btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
-        })
-        .catch(err => {
-          btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
-          console.error(err);
-        });
     }
   </script>
 </body>
