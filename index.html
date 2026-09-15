@@ -1,434 +1,125 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運動防護物資 • 現場領用登記站</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .fade-enter { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動防護物資領用登記站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased pb-10 selection:bg-teal-500 selection:text-white">
-
-  <!-- 頂部狀態列 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6">
-      <div class="flex items-center justify-between h-16">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white flex items-center justify-center shadow-md">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-          </div>
-          <div>
-            <h1 class="text-base sm:text-lg font-black text-slate-900 leading-tight">現場物資領用登記站</h1>
-            <p class="text-xs text-slate-500 font-medium">前線防護員專用 ⇄ 雲端自動同步連線</p>
-          </div>
-        </div>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>☁️ 雲端連線中</span>
-        </span>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-5">
-
-    <!-- 1. 活動專案與常駐登記人 -->
-    <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">🎯</span>
-        <div>
-          <div class="text-xs text-slate-200 font-bold">當前值勤活動專案與人員</div>
-          <div class="text-[11px] text-slate-400">請確認目前活動與登記人，每次操作皆會即時寫入試算表。</div>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-amber-300 shrink-0">活動專案 *</span>
-          <select id="eventSelect" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-amber-400 font-bold">
-            <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
-            <option value="桃園計畫隨隊">桃園計畫隨隊</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-slate-300 shrink-0">登記人 *</span>
-          <input type="text" id="staffUserName" placeholder="例：林防護員" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-teal-400 w-28 sm:w-32">
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-slate-300 shrink-0">單位 *</span>
-          <input type="text" id="staffStationName" placeholder="例：田徑組" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:ring-2 focus:ring-teal-400 w-28 sm:w-32">
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. 主畫面：左側精確表單、右側即時現貨與快速增減按鈕 -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-      <!-- 左側：詳細登記表單 -->
-      <div class="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h2 class="text-sm font-black text-slate-900 flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
-            詳細登記表單
-          </h2>
-          <div class="flex bg-slate-100 p-1 rounded-xl text-xs">
-            <button id="typeBtnCheckout" type="button" onclick="setActionType('checkout')" class="px-2.5 py-1 rounded-lg font-bold bg-teal-600 text-white shadow-xs">領出/借出</button>
-            <button id="typeBtnReturn" type="button" onclick="setActionType('return')" class="px-2.5 py-1 rounded-lg font-bold text-slate-600">退回/歸還</button>
-          </div>
+<body class="bg-slate-100 text-slate-800 p-4 max-w-md mx-auto">
+    <div class="bg-white p-6 shadow-lg rounded-2xl mt-4">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-xl font-bold text-slate-900">📋 現場物資領用登記</h1>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-semibold">☁️ 永久雲端連線</span>
         </div>
 
-        <form onsubmit="handlePortalDetailSubmit(event)" class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">分類過濾</label>
-            <select id="formCategorySelect" onchange="filterFormItems()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-              <option value="all">全部分類</option>
-              <option value="貼紮">🏷️ 貼紮用品類</option>
-              <option value="外傷">🩹 外傷處理類</option>
-              <option value="其它">📦 其它裝備類</option>
-            </select>
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block font-bold text-slate-700">選擇品項 *</label>
-              <span id="itemBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">耗材</span>
-            </div>
-            <select id="formItemSelect" onchange="onFormItemChanged()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-semibold outline-none">
-            </select>
-          </div>
-          <div class="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+        <form id="pickup-form" onsubmit="submitForm(event)" class="space-y-4">
             <div>
-              <span class="text-[11px] text-teal-800 font-medium block">現場領用區現貨</span>
-              <span class="text-xl font-black text-teal-900" id="formCurrentStock">0 卷</span>
+                <label class="block text-sm font-medium text-slate-700 mb-1">活動專案</label>
+                <select id="eventName" class="w-full border rounded-xl p-2.5 bg-slate-50">
+                    <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+                    <option value="桃園計畫隨隊">桃園計畫隨隊</option>
+                    <option value="其他專案活動">其他專案活動</option>
+                </select>
             </div>
-            <div class="text-right">
-              <span class="text-[11px] text-slate-500 block">外借中 / 消耗</span>
-              <span class="text-xs font-bold text-amber-600" id="formCurrentBorrowed">0 卷</span>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">借領單位</label>
+                    <input type="text" id="unit" required placeholder="例如：防護組" class="w-full border rounded-xl p-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">登記人員</label>
+                    <input type="text" id="user" required placeholder="您的姓名" class="w-full border rounded-xl p-2.5">
+                </div>
             </div>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
+
             <div>
-              <label class="block font-bold text-slate-700 mb-1" id="formQtyLabel">數量 *</label>
-              <div class="relative">
-                <input type="number" id="formQtyInput" min="1" value="1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-                <span id="formUnitSuffix" class="absolute right-3 top-2 text-[11px] text-slate-400">卷</span>
-              </div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">異動類型</label>
+                <select id="actionType" class="w-full border rounded-xl p-2.5 bg-slate-50">
+                    <option value="耗材領出">耗材領出 (消耗)</option>
+                    <option value="器材借出">器材借出 (未還)</option>
+                    <option value="歸還/退回">歸還 / 未用退回</option>
+                </select>
             </div>
+
             <div>
-              <label class="block font-bold text-slate-700 mb-1">備註說明</label>
-              <input type="text" id="formNoteInput" placeholder="例：腳踝固定" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none">
+                <label class="block text-sm font-medium text-slate-700 mb-1">品項名稱</label>
+                <input type="text" id="itemName" required placeholder="例如：白貼、肌內效、生理食鹽水" class="w-full border rounded-xl p-2.5">
             </div>
-          </div>
-          <button type="submit" id="formSubmitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold shadow transition">
-            確認送出登記
-          </button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">數量</label>
+                    <input type="number" id="qty" required min="1" value="1" class="w-full border rounded-xl p-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">單位</label>
+                    <input type="text" id="unitName" value="卷/個" class="w-full border rounded-xl p-2.5">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">備註說明 (選填)</label>
+                <input type="text" id="note" placeholder="例如：場地 A 消耗" class="w-full border rounded-xl p-2.5">
+            </div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow transition">
+                確認送出登記
+            </button>
         </form>
-      </div>
-
-      <!-- 右側：領用區品項清單（附帶快速增減與送出按鈕） -->
-      <div class="lg:col-span-8 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-          <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
-            <span>⚡</span> 領用區現貨清單（直接點擊加減並快速送出）
-          </h3>
-          <input type="text" id="quickSearch" oninput="renderQuickPickupCards()" placeholder="🔍 搜尋品項..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1 text-xs outline-none w-36 sm:w-48">
-        </div>
-        <div id="quickCardsContainer" class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
-        </div>
-      </div>
-
     </div>
 
-  </main>
+    <script>
+        // 永久寫死您的中央 API 網址
+        const FIXED_API_URL = "https://script.google.com/macros/s/AKfycbzVQHj-Uh5FBCi1jl2dfqYCjHpzVhbOohlJC-3vbQ30wa16ij5y5EXGZQj8AsQfhGa7/exec";
 
-  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold hidden z-50"></div>
+        function submitForm(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = "資料傳送中...";
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
+            const payload = {
+                time: new Date().toLocaleString('zh-TW', { hour12: false }),
+                eventName: document.getElementById('eventName').value,
+                unit: document.getElementById('unit').value,
+                user: document.getElementById('user').value,
+                actionType: document.getElementById('actionType').value,
+                itemName: document.getElementById('itemName').value,
+                qty: document.getElementById('qty').value,
+                unitName: document.getElementById('unitName').value,
+                note: document.getElementById('note').value,
+                _nonce: Date.now()
+            };
 
-    // 完整指定品項分類
-    const MASTER_ITEMS = [
-      { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T02", name: "運動貼布-1.5 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T04", name: "重型彈性貼布-2 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T05", name: "重型彈性貼布-3 吋寬", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T06", name: "肌內效貼布", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T07", name: "膚色自黏貼布", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T08", name: "動態貼布-2 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T09", name: "動態貼布-3 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T10", name: "史崔普肌動態活力貼-2 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T11", name: "史崔普肌動態活力貼-3 吋", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "貼紮", isEquipment: false, unit: "片", defaultPk: 0 },
-      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "貼紮", isEquipment: false, unit: "片", defaultPk: 0 },
-      { id: "W01", name: "水泡護墊(2nd Skin)", category: "外傷", isEquipment: false, unit: "片", defaultPk: 0 },
-      { id: "W02", name: "鼻血止血棉棒", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
-      { id: "W03", name: "酒精棉片", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
-      { id: "W04", name: "優碘棉片", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
-      { id: "W05", name: "防水透氣 OK 繃-一般型", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
-      { id: "W06", name: "防水透氣 OK 繃-大型", category: "外傷", isEquipment: false, unit: "盒", defaultPk: 0 },
-      { id: "W07", name: "生理食鹽水（小）", category: "外傷", isEquipment: false, unit: "瓶", defaultPk: 0 },
-      { id: "W08", name: "3M 透氣紙膠 1 吋", category: "外傷", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", category: "外傷", isEquipment: false, unit: "包", defaultPk: 0 },
-      { id: "W10", name: "檢診手套(無粉)", category: "外傷", isEquipment: false, unit: "隻", defaultPk: 0 },
-      { id: "W11", name: "乾洗手", category: "外傷", isEquipment: false, unit: "瓶", defaultPk: 0 },
-      { id: "W12", name: "滅菌傷口清洗棉棒", category: "外傷", isEquipment: false, unit: "包", defaultPk: 0 },
-      { id: "O01", name: "冰敷用塑膠袋", category: "其它", isEquipment: false, unit: "包", defaultPk: 0 },
-      { id: "O02", name: "冰敷膠膜", category: "其它", isEquipment: false, unit: "卷", defaultPk: 0 },
-      { id: "O03", name: "熱身用運動軟膏", category: "其它", isEquipment: false, unit: "瓶", defaultPk: 0 },
-      { id: "E01", name: "防護包", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E02", name: "冰桶-大", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E03", name: "冰桶-中", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E04", name: "可調式頸圈", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E05", name: "折疊處理床", category: "其它", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E06", name: "捲式鋁製夾板", category: "其它", isEquipment: true, unit: "卷", defaultPk: 0 },
-      { id: "E07", name: "三折式關節夾板", category: "Other", isEquipment: true, unit: "個", defaultPk: 0 },
-      { id: "E08", name: "肢體固定三角巾", category: "其它", isEquipment: true, unit: "條", defaultPk: 0 },
-      { id: "E09", name: "4 吋加長型彈繃", category: "貼紮", isEquipment: false, unit: "卷", defaultPk: 0 }
-    ];
+            // 採用 JSONP 穿透送出，確保手機 100% 寫入試算表
+            const cbName = 'tx_cb_' + Math.round(Math.random() * 100000);
+            const queryStr = Object.keys(payload).map(k => `${k}=${encodeURIComponent(payload[k])}`).join('&');
+            const script = document.createElement('script');
+            script.src = `${FIXED_API_URL}?action=add&${queryStr}&callback=${cbName}`;
 
-    let currentActionType = 'checkout';
-    let stockData = {};
+            window[cbName] = function(res) {
+                delete window[cbName];
+                document.body.removeChild(script);
+                btn.disabled = false;
+                btn.innerText = "確認送出登記";
+                alert("✅ 登記成功，已即時同步至中央後台！");
+                document.getElementById('itemName').value = '';
+                document.getElementById('qty').value = '1';
+                document.getElementById('note').value = '';
+            };
 
-    function initStock() {
-      const saved = localStorage.getItem('SPORTS_MED_LOCAL_STOCK');
-      if (saved) {
-        try { stockData = JSON.parse(saved); return; } catch(e){}
-      }
-      stockData = { "苗栗計畫隨隊": {}, "桃園計畫隨隊": {} };
-      Object.keys(stockData).forEach(ev => {
-        MASTER_ITEMS.forEach(it => {
-          stockData[ev][it.id] = { pickup: 0, borrowed: 0 };
-        });
-      });
-    }
+            script.onerror = function() {
+                delete window[cbName];
+                document.body.removeChild(script);
+                btn.disabled = false;
+                btn.innerText = "確認送出登記";
+                alert("⚠️ 網路異常或傳送失敗，請再試一次。");
+            };
 
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 3500);
-    }
-
-    function setActionType(type) {
-      currentActionType = type;
-      const bOut = document.getElementById('typeBtnCheckout');
-      const bIn = document.getElementById('typeBtnReturn');
-      const btn = document.getElementById('formSubmitBtn');
-      if (type === 'checkout') {
-        bOut.className = "px-2.5 py-1 rounded-lg font-bold bg-teal-600 text-white shadow-xs";
-        bIn.className = "px-2.5 py-1 rounded-lg font-bold text-slate-600";
-        btn.className = "w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold shadow transition";
-        btn.innerText = "確認送出領用登記";
-      } else {
-        bIn.className = "px-2.5 py-1 rounded-lg font-bold bg-amber-600 text-white shadow-xs";
-        bOut.className = "px-2.5 py-1 rounded-lg font-bold text-slate-600";
-        btn.className = "w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-xl font-bold shadow transition";
-        btn.innerText = "確認送出歸還登記";
-      }
-    }
-
-    function filterFormItems() {
-      const cat = document.getElementById('formCategorySelect').value;
-      const select = document.getElementById('formItemSelect');
-      const ev = document.getElementById('eventSelect').value;
-      let items = MASTER_ITEMS;
-      if (cat !== 'all') items = items.filter(i => i.category === cat);
-
-      select.innerHTML = items.map(i => {
-        const s = stockData[ev]?.[i.id] || { pickup: 0 };
-        return `<option value="${i.id}">[${i.category}] ${i.name} (現貨: ${s.pickup} ${i.unit})</option>`;
-      }).join('');
-      onFormItemChanged();
-    }
-
-    function onFormItemChanged() {
-      const id = document.getElementById('formItemSelect').value;
-      const ev = document.getElementById('eventSelect').value;
-      const item = MASTER_ITEMS.find(i => i.id === id);
-      if (!item) return;
-      const s = stockData[ev]?.[id] || { pickup: 0, borrowed: 0 };
-      document.getElementById('formUnitSuffix').innerText = item.unit;
-      document.getElementById('formCurrentStock').innerText = `${s.pickup} ${item.unit}`;
-      document.getElementById('formCurrentBorrowed').innerText = `${s.borrowed} ${item.unit}`;
-    }
-
-    function renderQuickPickupCards() {
-      const container = document.getElementById('quickCardsContainer');
-      const search = (document.getElementById('quickSearch').value || '').trim().toLowerCase();
-      const ev = document.getElementById('eventSelect').value;
-      const cat = document.getElementById('formCategorySelect').value;
-
-      let items = MASTER_ITEMS;
-      if (cat !== 'all') items = items.filter(i => i.category === cat);
-      if (search) items = items.filter(i => i.name.toLowerCase().includes(search));
-
-      container.innerHTML = items.map(item => {
-        const s = stockData[ev]?.[item.id] || { pickup: 0, borrowed: 0 };
-        return `
-          <div class="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800">${item.category}</span>
-                <span class="text-xs font-bold text-slate-900">${item.name}</span>
-              </div>
-              <div class="text-[11px] text-slate-400 mt-0.5">現貨：<strong class="text-teal-700">${s.pickup} ${item.unit}</strong></div>
-            </div>
-            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
-              <select id="qType_${item.id}" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none">
-                <option value="checkout">領出</option>
-                <option value="return">歸還</option>
-              </select>
-              <button type="button" onclick="stepQty('${item.id}', -1)" class="w-6 h-6 rounded bg-slate-200 text-xs font-bold">-</button>
-              <input type="number" id="qQty_${item.id}" min="1" value="1" class="w-10 text-center font-bold text-xs bg-white border border-slate-200 rounded py-0.5 outline-none">
-              <button type="button" onclick="stepQty('${item.id}', 1)" class="w-6 h-6 rounded bg-slate-200 text-xs font-bold">+</button>
-              <span class="text-[11px] text-slate-400">${item.unit}</span>
-              <button type="button" onclick="quickCardSubmit('${item.id}')" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs">送出</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function stepQty(id, delta) {
-      const input = document.getElementById(`qQty_${id}`);
-      if (!input) return;
-      let val = parseInt(input.value, 10) || 1;
-      val = Math.max(1, val + delta);
-      input.value = val;
-    }
-
-    function quickCardSubmit(id) {
-      const user = document.getElementById('staffUserName').value.trim();
-      const unit = document.getElementById('staffStationName').value.trim();
-      const ev = document.getElementById('eventSelect').value;
-      const type = document.getElementById(`qType_${id}`).value;
-      const qty = parseInt(document.getElementById(`qQty_${id}`).value, 10) || 1;
-      const item = MASTER_ITEMS.find(i => i.id === id);
-
-      if (!user || !unit) {
-        showToast('請先填寫登記人姓名與借領單位！');
-        return;
-      }
-
-      executeSubmit({ eventName: ev, user, unit, actionType: type, itemName: item.name, qty, unitName: item.unit, note: '快速登記' });
-    }
-
-    function handlePortalDetailSubmit(e) {
-      e.preventDefault();
-      const user = document.getElementById('staffUserName').value.trim();
-      const unit = document.getElementById('staffStationName').value.trim();
-      const ev = document.getElementById('eventSelect').value;
-      const itemId = document.getElementById('formItemSelect').value;
-      const qty = parseInt(document.getElementById('formQtyInput').value, 10);
-      const note = document.getElementById('formNoteInput').value.trim();
-      const item = MASTER_ITEMS.find(i => i.id === itemId);
-
-      if (!user || !unit) {
-        showToast('請填寫登記人姓名與借領單位！');
-        return;
-      }
-
-      executeSubmit({ eventName: ev, user, unit, actionType: currentActionType, itemName: item.name, qty, unitName: item.unit, note });
-    }
-
-    function executeSubmit(payload) {
-      const ev = payload.eventName;
-      const item = MASTER_ITEMS.find(i => i.name === payload.itemName);
-      if (!stockData[ev]) stockData[ev] = {};
-      if (!stockData[ev][item.id]) stockData[ev][item.id] = { pickup: 0, borrowed: 0 };
-
-      const s = stockData[ev][item.id];
-      if (payload.actionType === 'checkout') {
-        s.pickup = Math.max(0, s.pickup - payload.qty);
-        s.borrowed += payload.qty;
-      } else {
-        s.pickup += payload.qty;
-        s.borrowed = Math.max(0, s.borrowed - payload.qty);
-      }
-      localStorage.setItem('SPORTS_MED_LOCAL_STOCK', JSON.stringify(stockData));
-
-      // 送至 Google 試算表
-      const frameName = 'frame_' + Date.now();
-      const iframe = document.createElement('iframe');
-      iframe.name = frameName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = API_URL;
-      form.target = frameName;
-      form.style.display = 'none';
-
-      Object.keys(payload).forEach(k => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = k;
-        input.value = payload[k];
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-      form.submit();
-
-      setTimeout(() => {
-        document.body.removeChild(form);
-        document.body.removeChild(iframe);
-        showToast(`✅ 成功送出登記：${payload.itemName} x ${payload.qty}`);
-        filterFormItems();
-        renderQuickPickupCards();
-      }, 1000);
-    }
-
-    window.onload = function() {
-      initStock();
-      filterFormItems();
-      renderQuickPickupCards();
-      document.getElementById('eventSelect').onchange = () => { filterFormItems(); renderQuickPickupCards(); };
-    };
-  </script>
+            document.body.appendChild(script);
+        }
+    </script>
 </body>
 </html>
-// 📦 現場前端將資料送往 Google 試算表的函數
-function sendDataToCloud(payload) {
-  // 這是您的 Google 雲端 API 管道網址
-  const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
-  
-  const frameName = 'cloud_frame_' + Date.now();
-  const iframe = document.createElement('iframe');
-  iframe.name = frameName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API_URL;
-  form.target = frameName;
-  form.style.display = 'none';
-
-  // 將所有登記欄位打包成隱藏欄位傳送
-  Object.keys(payload).forEach(key => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = key;
-    input.value = payload[key];
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-
-  // 1.5秒後自動清除隱藏表單與框架
-  setTimeout(() => {
-    try {
-      if (form.parentNode) form.parentNode.removeChild(form);
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    } catch(e) {}
-  }, 1500);
-}
