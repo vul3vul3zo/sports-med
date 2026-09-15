@@ -27,6 +27,7 @@
           <span class="text-xs text-slate-400 font-bold">當前活動:</span>
           <select id="eventSelect" onchange="changeEvent()" class="bg-transparent text-sm font-bold text-white outline-none cursor-pointer">
             <option value="所有計畫總表">🌐 所有計畫總表</option>
+            <option value="115全民運">115全民運</option>
             <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
             <option value="桃園計畫隨隊">桃園計畫隨隊</option>
           </select>
@@ -319,7 +320,7 @@
           
           // 動態萃取雲端所有活動，並重建下拉選單
           const sel = document.getElementById('eventSelect');
-          const defaultEvents = ["苗栗計畫隨隊", "桃園計畫隨隊"];
+          const defaultEvents = ["115全民運", "苗栗計畫隨隊", "桃園計畫隨隊"];
           const logEvents = globalLogs.map(log => log.eventName).filter(e => e && e !== '所有計畫總表');
           const allEvents = [...new Set([...defaultEvents, ...logEvents])]; // 移除重複項目
           
