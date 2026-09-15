@@ -262,12 +262,45 @@
       e.preventDefault();
       const val = document.getElementById('newEventName').value.trim();
       if(val) {
-        const sel = document.getElementById('eventSelect');
-        sel.add(new Option(val, val));
-        sel.value = val;
-        changeEvent();
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerText = '寫入雲端中...';
+        
+        // 建立專屬 payload 將新活動註冊到雲端試算表
+        const payload = {
+          action: 'add',
+          time: new Date().toLocaleString('zh-TW', { hour12: false }),
+          eventName: val, // 新增的活動名稱
+          unit: '總部管理',
+          user: '系統管理員',
+          actionType: '新增活動專案',
+          itemName: '系統設定',
+          qty: 0,
+          unitName: '項',
+          note: '建立新活動',
+          _t: Date.now()
+        };
+
+        const cbName = 'tx_new_event_' + Math.round(Math.random() * 1000000);
+        const queryStr = Object.keys(payload).map(k => `${k}=${encodeURIComponent(payload[k])}`).join('&');
+        const script = document.createElement('script');
+        script.src = `${API_URL}?${queryStr}&callback=${cbName}`;
+
+        window[cbName] = function(res) {
+          delete window[cbName];
+          document.body.removeChild(script);
+          
+          currentEvent = val; // 強制切換至新活動
+          document.getElementById('inventoryTitleEvent').innerText = currentEvent;
+          closeModal('newEventModal');
+          btn.disabled = false;
+          btn.innerText = '新增活動';
+          document.getElementById('newEventName').value = '';
+          alert(`✅ 成功新增活動「${val}」！\n此活動已永久同步至雲端，現場手機重整後即可看到。`);
+          fetchFromCloud(); // 重新抓取雲端資料以更新選單
+        };
+        document.body.appendChild(script);
       }
-      closeModal('newEventModal');
     }
 
     function fetchFromCloud() {
@@ -283,6 +316,21 @@
         document.body.removeChild(script);
         if (response && response.status === "success") {
           globalLogs = response.data || [];
+          
+          // 動態萃取雲端所有活動，並重建下拉選單
+          const sel = document.getElementById('eventSelect');
+          const defaultEvents = ["苗栗計畫隨隊", "桃園計畫隨隊"];
+          const logEvents = globalLogs.map(log => log.eventName).filter(e => e && e !== '所有計畫總表');
+          const allEvents = [...new Set([...defaultEvents, ...logEvents])]; // 移除重複項目
+          
+          sel.innerHTML = '<option value="所有計畫總表">🌐 所有計畫總表</option>';
+          allEvents.forEach(ev => sel.add(new Option(ev, ev)));
+          
+          // 保持當前選擇的活動
+          if (allEvents.includes(currentEvent) || currentEvent === '所有計畫總表') {
+            sel.value = currentEvent;
+          }
+          
           processData();
         } else {
           alert('讀取失敗，請確認網路連線。');
