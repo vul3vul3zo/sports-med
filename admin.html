@@ -1,497 +1,112 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運動防護物資總管系統 • 雲端雙向連動版</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .fade-enter { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動防護物資總管後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased pb-10">
-
-  <!-- 頂部導航列 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6">
-      <div class="flex items-center justify-between h-16">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white flex items-center justify-center font-black shadow-md">📊</div>
-          <div>
-            <h1 class="text-base sm:text-lg font-black text-slate-950">運動防護物資總管系統</h1>
-            <p class="text-xs text-slate-500 font-medium">後台總控 ⇄ Google 雲端試算表雙向即時同步</p>
-          </div>
+<body class="bg-slate-100 text-slate-800 p-6">
+    <div class="max-w-5xl mx-auto bg-white p-6 shadow-lg rounded-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-slate-900">📊 運動防護物資總管後台</h1>
+            <button onclick="fetchCloudLogs()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition text-sm">
+                ⚡ 立即從雲端重新整理
+            </button>
         </div>
 
-        <div class="flex items-center gap-2">
-          <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
-            <button id="tabAdmin" onclick="switchTab('admin')" class="px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs">📊 後台庫存</button>
-            <button id="tabUnits" onclick="switchTab('units')" class="px-3 py-1.5 rounded-lg text-slate-600">🏢 單位對帳</button>
-            <button id="tabLogs" onclick="switchTab('logs')" class="px-3 py-1.5 rounded-lg text-slate-600">📑 流水明細</button>
-          </div>
-          <button onclick="syncFromCloud()" class="px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs flex items-center gap-1">
-            <span>🔄</span> 立即向雲端重新整理
-          </button>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-xl">
+            <p class="text-sm text-blue-700">💡 提示：本後台已與中央 Google 試算表永久綁定。隨時點擊上方按鈕，即可同步抓取全場所有手機送出的最新領用紀錄。</p>
         </div>
-      </div>
-    </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
-
-    <!-- 活動專案選擇列 -->
-    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <span class="text-lg">🎯</span>
-        <div>
-          <span class="text-[10px] font-bold text-slate-400 uppercase">當前控管專案活動</span>
-          <div class="text-base font-black text-slate-900" id="adminActiveEventLabel">苗栗計畫隨隊</div>
+        <h2 class="text-lg font-bold mb-3">📑 雲端即時流水明細</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-200 text-slate-700 text-sm">
+                        <th class="p-3 border">時間</th>
+                        <th class="p-3 border">活動專案</th>
+                        <th class="p-3 border">借領單位</th>
+                        <th class="p-3 border">登記人員</th>
+                        <th class="p-3 border">異動類型</th>
+                        <th class="p-3 border">品項名稱</th>
+                        <th class="p-3 border text-center">數量</th>
+                        <th class="p-3 border">備註</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-table-body" class="text-sm">
+                    <tr><td colspan="8" class="p-4 text-center text-slate-400">正在自動載入雲端資料...</td></tr>
+                </tbody>
+            </table>
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <select id="adminEventSelect" onchange="changeAdminEvent(this.value)" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none">
-          <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
-          <option value="桃園計畫隨隊">桃園計畫隨隊</option>
-          <option value="其他活動備註">其他活動備註</option>
-        </select>
-        <button onclick="openNewEventModal()" class="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold transition">➕ 新增活動</button>
-      </div>
     </div>
 
-    <!-- 頁面 1: 後台庫存 -->
-    <section id="viewAdmin" class="space-y-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-xs font-bold text-slate-400 uppercase">總在席量</span>
-          <div class="mt-2 text-2xl font-black text-slate-900" id="statAllTotal">0</div>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-xs font-bold text-slate-400 uppercase">大倉庫存倉</span>
-          <div class="mt-2 text-2xl font-black text-indigo-700" id="statWarehouseTotal">0</div>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-xs font-bold text-slate-400 uppercase">現場領用區現貨</span>
-          <div class="mt-2 text-2xl font-black text-teal-700" id="statPickupTotal">0</div>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-xs font-bold text-slate-400 uppercase">外借 / 消耗總計</span>
-          <div class="mt-2 text-2xl font-black text-amber-600" id="statBorrowedTotal">0</div>
-        </div>
-      </div>
+    <script>
+        // 永久寫死您的中央 API 網址
+        const FIXED_API_URL = "https://script.google.com/macros/s/AKfycbzVQHj-Uh5FBCi1jl2dfqYCjHpzVhbOohlJC-3vbQ30wa16ij5y5EXGZQj8AsQfhGa7/exec";
 
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-black text-slate-900">📊 品項總表與數量編輯（修改後直接同步寫入 Google 試算表）</h3>
-        </div>
-        <div class="overflow-x-auto rounded-xl border border-slate-200">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                <th class="py-3 px-3">品項名稱</th>
-                <th class="py-3 px-3">分類</th>
-                <th class="py-3 px-3 text-right">大倉庫存倉</th>
-                <th class="py-3 px-3 text-right">現場領用區現貨</th>
-                <th class="py-3 px-3 text-right font-black text-slate-900">總在席量</th>
-                <th class="py-3 px-3 text-center">編輯數量與撥發</th>
-              </tr>
-            </thead>
-            <tbody id="adminStockTableBody" class="divide-y divide-slate-100 text-slate-700">
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+        function fetchCloudLogs() {
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-blue-500 font-bold">正在同步雲端資料...</td></tr>`;
 
-    <!-- 頁面 2: 單位對帳 -->
-    <section id="viewUnits" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-        <h3 class="text-sm font-black text-slate-900">🏢 各單位領還與結算對帳</h3>
-        <div id="unitSettlementContainer" class="space-y-3 text-xs">
-          <div class="text-slate-400 py-6 text-center">尚無單位領借紀錄</div>
-        </div>
-      </div>
-    </section>
+            const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+            const script = document.createElement('script');
+            script.src = `${FIXED_API_URL}?callback=${callbackName}&_t=${Date.now()}`;
 
-    <!-- 頁面 3: 流水明細 -->
-    <section id="viewLogs" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-        <h3 class="text-sm font-black text-slate-900">📑 雲端試算表即時流水明細</h3>
-        <div class="overflow-x-auto rounded-xl border border-slate-200">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                <th class="py-3 px-3">時間</th>
-                <th class="py-3 px-3">活動名稱</th>
-                <th class="py-3 px-3">借領單位 / 人員</th>
-                <th class="py-3 px-3">動作</th>
-                <th class="py-3 px-3">品項名稱</th>
-                <th class="py-3 px-3 text-right">數量</th>
-                <th class="py-3 px-3">備註</th>
-              </tr>
-            </thead>
-            <tbody id="adminLogsTableBody" class="divide-y divide-slate-100 text-slate-700">
-              <tr><td colspan="7" class="py-6 text-center text-slate-400">正在向 Google 試算表讀取資料...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+            window[callbackName] = function(response) {
+                delete window[callbackName];
+                document.body.removeChild(script);
 
-  </main>
+                if (response && response.status === "success" && response.data) {
+                    renderTable(response.data);
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">載入失敗或尚無資料</td></tr>`;
+                }
+            };
 
-  <!-- 新增活動彈窗 -->
-  <div id="newEventModal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-900">➕ 新增隨隊活動專案</h3>
-        <button onclick="document.getElementById('newEventModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
-      </div>
-      <form onsubmit="handleCreateNewEvent(event)" class="space-y-4 text-xs">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">活動專案名稱 *</label>
-          <input type="text" id="newEventNameInput" required placeholder="例：全大運防護隨隊" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="document.getElementById('newEventModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold">取消</button>
-          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">確認新增</button>
-        </div>
-      </form>
-    </div>
-  </div>
+            script.onerror = function() {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">雲端連線失敗，請檢查網路</td></tr>`;
+            };
 
-  <!-- 編輯數量彈窗 -->
-  <div id="editQtyModal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 fade-enter">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-900" id="editQtyTitle">✏️ 編輯與撥發數量</h3>
-        <button onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
-      </div>
-      <form onsubmit="handleEditQtySubmit(event)" class="space-y-4 text-xs">
-        <input type="hidden" id="editItemId">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">大倉庫存倉數量 *</label>
-          <input type="number" id="editWhQty" min="0" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">現場領用區現貨數量 *</label>
-          <input type="number" id="editPkQty" min="0" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="document.getElementById('editQtyModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold">取消</button>
-          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold">儲存並同步至雲端</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold hidden z-50"></div>
-
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyHQiFrc9kMv37JfCJScyJgPJDWxLTSeyd-rHfYTGFVw6m0360XxlpVeyLJapszsSuI/exec";
-    const MASTER_ITEMS = [
-      { id: "T01", name: "皮膚保護膜-2.75 吋寬", category: "貼紮", unit: "卷" },
-      { id: "T02", name: "運動貼布-1.5 吋寬", category: "貼紮", unit: "卷" },
-      { id: "T03", name: "輕型彈性貼布-2 吋寬", category: "貼紮", unit: "卷" },
-      { id: "T04", name: "重型彈性貼布-2 吋寬", category: "貼紮", unit: "卷" },
-      { id: "T05", name: "重型彈性貼布-3 吋寬", category: "貼紮", unit: "卷" },
-      { id: "T06", name: "肌內效貼布", category: "貼紮", unit: "卷" },
-      { id: "T07", name: "膚色自黏貼布", category: "貼紮", unit: "卷" },
-      { id: "T08", name: "動態貼布-2 吋", category: "貼紮", unit: "卷" },
-      { id: "T09", name: "動態貼布-3 吋", category: "貼紮", unit: "卷" },
-      { id: "T10", name: "史崔普肌動態活力貼-2 吋", category: "貼紮", unit: "卷" },
-      { id: "T11", name: "史崔普肌動態活力貼-3 吋", category: "貼紮", unit: "卷" },
-      { id: "T12", name: "高密度黏性保護墊-1/8 吋厚", category: "貼紮", unit: "片" },
-      { id: "T13", name: "高密度黏性保護墊-1/4 吋厚", category: "貼紮", unit: "片" },
-      { id: "W01", name: "水泡護墊(2nd Skin)", category: "外傷", unit: "片" },
-      { id: "W02", name: "鼻血止血棉棒", category: "外傷", unit: "盒" },
-      { id: "W03", name: "酒精棉片", category: "外傷", unit: "盒" },
-      { id: "W04", name: "優碘棉片", category: "外傷", unit: "盒" },
-      { id: "W05", name: "防水透氣 OK 繃-一般型", category: "外傷", unit: "盒" },
-      { id: "W06", name: "防水透氣 OK 繃-大型", category: "外傷", unit: "盒" },
-      { id: "W07", name: "生理食鹽水（小）", category: "外傷", unit: "瓶" },
-      { id: "W08", name: "3M 透氣紙膠 1 吋", category: "外傷", unit: "卷" },
-      { id: "W09", name: "3*3 吋滅菌紗布墊 (2 片裝)", category: "外傷", unit: "包" },
-      { id: "W10", name: "檢診手套(無粉)", category: "外傷", unit: "隻" },
-      { id: "W11", name: "乾洗手", category: "外傷", unit: "瓶" },
-      { id: "W12", name: "滅菌傷口清洗棉棒", category: "外傷", unit: "包" },
-      { id: "O01", name: "冰敷用塑膠袋", category: "其它", unit: "包" },
-      { id: "O02", name: "冰敷膠膜", category: "其它", unit: "卷" },
-      { id: "O03", name: "熱身用運動軟膏", category: "其它", unit: "瓶" },
-      { id: "E01", name: "防護包", category: "其它", unit: "個" },
-      { id: "E02", name: "冰桶-大", category: "其它", unit: "個" },
-      { id: "E03", name: "冰桶-中", category: "其它", unit: "個" },
-      { id: "E04", name: "可調式頸圈", category: "其它", unit: "個" },
-      { id: "E05", name: "折疊處理床", category: "其它", unit: "個" },
-      { id: "E06", name: "捲式鋁製夾板", category: "其它", unit: "卷" },
-      { id: "E07", name: "三折式關節夾板", category: "其它", unit: "個" },
-      { id: "E08", name: "肢體固定三角巾", category: "其它", unit: "條" },
-      { id: "E09", name: "4 吋加長型彈繃", category: "貼紮", unit: "卷" }
-    ];
-
-    let eventsList = ["苗栗計畫隨隊", "桃園計畫隨隊"];
-    let currentEvent = "苗栗計畫隨隊";
-    let stockData = {};
-    let cloudLogsData = [];
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 3500);
-    }
-
-    function initZeroStock() {
-      eventsList.forEach(ev => {
-        if (!stockData[ev]) stockData[ev] = {};
-        MASTER_ITEMS.forEach(it => {
-          if (!stockData[ev][it.id]) {
-            stockData[ev][it.id] = { wh: 0, pk: 0 };
-          }
-        });
-      });
-    }
-
-    function switchTab(tab) {
-      document.getElementById('viewAdmin').classList.add('hidden');
-      document.getElementById('viewUnits').classList.add('hidden');
-      document.getElementById('viewLogs').classList.add('hidden');
-      document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
-      document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
-      document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg text-slate-600 font-bold";
-
-      if (tab === 'admin') {
-        document.getElementById('viewAdmin').classList.remove('hidden');
-        document.getElementById('tabAdmin').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
-      } else if (tab === 'units') {
-        document.getElementById('viewUnits').classList.remove('hidden');
-        document.getElementById('tabUnits').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
-        renderUnitSettlement();
-      } else if (tab === 'logs') {
-        document.getElementById('viewLogs').classList.remove('hidden');
-        document.getElementById('tabLogs').className = "px-3 py-1.5 rounded-lg bg-teal-600 text-white shadow-xs font-bold";
-      }
-    }
-
-    function renderAdminEvents() {
-      const sel = document.getElementById('adminEventSelect');
-      sel.innerHTML = eventsList.map(e => `<option value="${e}" ${e === currentEvent ? 'selected' : ''}>${e}</option>`).join('');
-      document.getElementById('adminActiveEventLabel').innerText = currentEvent;
-    }
-
-    function changeAdminEvent(val) {
-      currentEvent = val;
-      document.getElementById('adminActiveEventLabel').innerText = val;
-      renderAdminTable();
-      renderStats();
-    }
-
-    function openNewEventModal() {
-      document.getElementById('newEventModal').classList.remove('hidden');
-    }
-
-    function handleCreateNewEvent(e) {
-      e.preventDefault();
-      const name = document.getElementById('newEventNameInput').value.trim();
-      if (!name) return;
-      if (!eventsList.includes(name)) {
-        eventsList.push(name);
-        initZeroStock();
-        renderAdminEvents();
-        changeAdminEvent(name);
-        showToast(`✅ 成功新增活動專案「${name}」！`);
-      }
-      document.getElementById('newEventModal').classList.add('hidden');
-      document.getElementById('newEventNameInput').value = '';
-    }
-
-    function renderAdminTable() {
-      const tbody = document.getElementById('adminStockTableBody');
-      const curStock = stockData[currentEvent] || {};
-      tbody.innerHTML = MASTER_ITEMS.map(it => {
-        const s = curStock[it.id] || { wh: 0, pk: 0 };
-        return `
-          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-            <td class="py-3 px-3 font-bold text-slate-900">${it.name} (${it.unit})</td>
-            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">${it.category}</span></td>
-            <td class="py-3 px-3 text-right font-bold text-indigo-700">${s.wh} ${it.unit}</td>
-            <td class="py-3 px-3 text-right font-black text-teal-700">${s.pk} ${it.unit}</td>
-            <td class="py-3 px-3 text-right font-black text-slate-900 bg-slate-50/50">${s.wh + s.pk} ${it.unit}</td>
-            <td class="py-3 px-3 text-center">
-              <button onclick="openEditQty('${it.id}')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold border border-teal-200">編輯/撥發數量</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function openEditQty(itemId) {
-      const it = MASTER_ITEMS.find(i => i.id === itemId);
-      const s = stockData[currentEvent][itemId] || { wh: 0, pk: 0 };
-      document.getElementById('editItemId').value = itemId;
-      document.getElementById('editQtyTitle').innerText = `✏️ 編輯數量與撥發：${it.name}`;
-      document.getElementById('editWhQty').value = s.wh;
-      document.getElementById('editPkQty').value = s.pk;
-      document.getElementById('editQtyModal').classList.remove('hidden');
-    }
-
-    function handleEditQtySubmit(e) {
-      e.preventDefault();
-      const itemId = document.getElementById('editItemId').value;
-      const wh = parseInt(document.getElementById('editWhQty').value, 10) || 0;
-      const pk = parseInt(document.getElementById('editPkQty').value, 10) || 0;
-
-      stockData[currentEvent][itemId] = { wh: wh, pk: pk };
-      document.getElementById('editQtyModal').classList.add('hidden');
-      renderAdminTable();
-      renderStats();
-
-      // 🚀 同步寫入雲端試算表紀錄
-      const it = MASTER_ITEMS.find(i => i.id === itemId);
-      sendCloudRecord({
-        eventName: currentEvent,
-        unit: '後台總倉',
-        user: '管理員',
-        actionType: '管理員庫存校正',
-        itemName: it.name,
-        qty: wh + pk,
-        unitName: it.unit,
-        note: `大倉:${wh}, 領用區:${pk}`
-      });
-
-      showToast('✅ 數量設定已更新並同步至雲端！');
-    }
-
-    function renderStats() {
-      let wh = 0, pk = 0;
-      const curStock = stockData[currentEvent] || {};
-      MASTER_ITEMS.forEach(it => {
-        const s = curStock[it.id] || { wh: 0, pk: 0 };
-        wh += s.wh;
-        pk += s.pk;
-      });
-      document.getElementById('statAllTotal').innerText = (wh + pk).toLocaleString();
-      document.getElementById('statWarehouseTotal').innerText = wh.toLocaleString();
-      document.getElementById('statPickupTotal').innerText = pk.toLocaleString();
-    }
-
-    function syncFromCloud() {
-      showToast('⏳ 正在向 Google 試算表同步資料...');
-      const script = document.createElement('script');
-      const cbName = 'sync_admin_' + Date.now();
-
-      window[cbName] = function(res) {
-        delete window[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-
-        if (res && res.status === 'success' && Array.isArray(res.data)) {
-          cloudLogsData = res.data;
-          renderLogsTable(res.data);
-          renderUnitSettlement();
-          showToast('✅ 成功與 Google 試算表同步最新資料！');
+            document.body.appendChild(script);
         }
-      };
 
-      script.src = `${API_URL}?callback=${cbName}&_t=${Date.now()}`;
-      script.onerror = () => { showToast('雲端同步連線失敗'); };
-      document.body.appendChild(script);
-    }
+        function renderTable(dataList) {
+            const tbody = document.getElementById('logs-table-body');
+            if (dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">目前尚無任何登記紀錄</td></tr>`;
+                return;
+            }
 
-    function renderLogsTable(data) {
-      const tbody = document.getElementById('adminLogsTableBody');
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">尚無領用紀錄</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.slice().reverse().map(l => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-3 px-3 font-mono text-slate-500">${l.time}</td>
-          <td class="py-3 px-3 font-bold text-slate-900">${l.eventName}</td>
-          <td class="py-3 px-3 font-bold text-amber-800">${l.unit} / ${l.user}</td>
-          <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-bold ${l.actionType.includes('領') || l.actionType === 'checkout' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">${l.actionType}</span></td>
-          <td class="py-3 px-3 font-bold text-slate-900">${l.itemName}</td>
-          <td class="py-3 px-3 text-right font-black text-teal-700">${l.qty} ${l.unitName}</td>
-          <td class="py-3 px-3 text-slate-500">${l.note || '-'}</td>
-        </tr>
-      `).join('');
-    }
+            tbody.innerHTML = '';
+            // 反轉讓最新一筆顯示在最上方
+            dataList.reverse().forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-3 border text-xs text-slate-500">${row.time || ''}</td>
+                    <td class="p-3 border">${row.eventName || ''}</td>
+                    <td class="p-3 border font-semibold">${row.unit || ''}</td>
+                    <td class="p-3 border">${row.user || ''}</td>
+                    <td class="p-3 border">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${row.actionType==='耗材領出'||row.actionType==='器材借出'?'bg-amber-100 text-amber-800':'bg-emerald-100 text-emerald-800'}">
+                            ${row.actionType || '領出'}
+                        </span>
+                    </td>
+                    <td class="p-3 border font-bold text-blue-600">${row.itemName || ''}</td>
+                    <td class="p-3 border text-center font-bold">${row.qty || 0} ${row.unitName || ''}</td>
+                    <td class="p-3 border text-xs text-slate-500">${row.note || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-    function renderUnitSettlement() {
-      const container = document.getElementById('unitSettlementContainer');
-      if (!cloudLogsData || cloudLogsData.length === 0) {
-        container.innerHTML = `<div class="text-slate-400 py-6 text-center">尚無單位領借紀錄</div>`;
-        return;
-      }
-
-      const map = {};
-      cloudLogsData.forEach(l => {
-        const u = l.unit || '未指定單位';
-        if (!map[u]) map[u] = [];
-        map[u].push(l);
-      });
-
-      container.innerHTML = Object.keys(map).map(unitName => {
-        const logs = map[unitName];
-        return `
-          <div class="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h4 class="font-bold text-slate-900 text-sm">🏢 ${unitName}</h4>
-              <span class="text-xs text-slate-400 font-mono">${logs.length} 筆操作紀錄</span>
-            </div>
-            <div class="space-y-1 text-xs">
-              ${logs.map(l => `
-                <div class="flex justify-between py-1 px-2 rounded bg-slate-50">
-                  <span>[${l.time}] <strong>${l.user}</strong> ${l.actionType} <strong>${l.itemName}</strong> x ${l.qty} ${l.unitName}</span>
-                  <span class="text-slate-400">${l.eventName}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function sendCloudRecord(payload) {
-      const frameName = 'frame_' + Date.now();
-      const iframe = document.createElement('iframe');
-      iframe.name = frameName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = API_URL;
-      form.target = frameName;
-      form.style.display = 'none';
-
-      Object.keys(payload).forEach(k => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = k;
-        input.value = payload[k];
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-      form.submit();
-
-      setTimeout(() => {
-        try {
-          document.body.removeChild(form);
-          document.body.removeChild(iframe);
-        } catch(e) {}
-      }, 1500);
-    }
-
-    window.onload = function() {
-      initZeroStock();
-      renderAdminEvents();
-      renderAdminTable();
-      renderStats();
-      syncFromCloud();
-    };
-  </script>
+        // 頁面載入時自動抓取一次
+        window.onload = function() {
+            fetchCloudLogs();
+        };
+    </script>
 </body>
 </html>
