@@ -33,7 +33,7 @@
       <!-- 活動專案 -->
       <div>
         <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">🎯 當前活動專案</label>
-        <select id="eventName" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+        <select id="eventName" required onchange="renderItemSelect()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
           <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
           <option value="桃園計畫隨隊">桃園計畫隨隊</option>
           <option value="其他專案活動">其他專案活動</option>
@@ -136,6 +136,7 @@
     ];
 
     let inventoryCache = {};
+    let globalLogs = []; // 新增：用來儲存從雲端抓下來的所有紀錄
 
     // 網頁載入時，自動抓取最新的現貨數量
     window.onload = function() {
@@ -151,23 +152,31 @@
         delete window[cbName];
         document.body.removeChild(script);
 
-        // 初始化庫存為 0
-        baseItems.forEach(i => inventoryCache[i.name] = 0);
-
         if (res && res.status === "success" && res.data) {
-          // 計算領用區現貨 (跟總表邏輯完全一致)
-          res.data.forEach(log => {
-            let q = Number(log.qty);
-            if (inventoryCache[log.itemName] !== undefined) {
-              if (log.actionType === '後台盤點校正(領用區)' && log.note === '增加') inventoryCache[log.itemName] += q;
-              else if (log.actionType === '後台盤點校正(領用區)' && log.note === '減少') inventoryCache[log.itemName] -= q;
-              else if (log.actionType === '撥發至領用區') inventoryCache[log.itemName] += q;
-              else if (log.actionType === '耗材領出' || log.actionType === '器材借出') inventoryCache[log.itemName] -= q;
-              else if (log.actionType === '未用退回' || log.actionType === '器材歸還') inventoryCache[log.itemName] += q;
-            }
+          globalLogs = res.data; // 將所有雲端紀錄存起來
+          
+          // --- 新增：動態從雲端萃取活動名稱，更新下拉選單 ---
+          const eventSelect = document.getElementById('eventName');
+          const currentVal = eventSelect.value;
+          const defaultEvents = ["苗栗計畫隨隊", "桃園計畫隨隊", "其他專案活動"];
+          const logEvents = globalLogs.map(log => log.eventName).filter(e => e && e !== '所有計畫總表');
+          const allEvents = [...new Set([...defaultEvents, ...logEvents])]; // 去除重複的專案
+          
+          eventSelect.innerHTML = '';
+          allEvents.forEach(ev => {
+             const opt = document.createElement('option');
+             opt.value = ev;
+             opt.innerText = ev;
+             eventSelect.appendChild(opt);
           });
+          
+          if (allEvents.includes(currentVal)) {
+              eventSelect.value = currentVal;
+          }
+          // ----------------------------------------------------
         }
         
+        // 根據當前選擇的活動，計算現貨並渲染選單
         renderItemSelect();
         document.getElementById('syncStatusText').innerText = "✅ 已取得最新現貨數量";
       };
@@ -175,9 +184,27 @@
       document.body.appendChild(script);
     }
 
-    // 將包含現貨數量的品項渲染到下拉選單
+    // 將包含現貨數量的品項渲染到下拉選單 (加入活動篩選邏輯)
     function renderItemSelect() {
       const select = document.getElementById('itemName');
+      const currentEvent = document.getElementById('eventName').value;
+      
+      // 初始化庫存為 0
+      inventoryCache = {};
+      baseItems.forEach(i => inventoryCache[i.name] = 0);
+      
+      // 只有屬於「當前選擇活動」的紀錄才進行計算
+      globalLogs.filter(log => log.eventName === currentEvent).forEach(log => {
+        let q = Number(log.qty);
+        if (inventoryCache[log.itemName] !== undefined) {
+          if (log.actionType === '後台盤點校正(領用區)' && log.note === '增加') inventoryCache[log.itemName] += q;
+          else if (log.actionType === '後台盤點校正(領用區)' && log.note === '減少') inventoryCache[log.itemName] -= q;
+          else if (log.actionType === '撥發至領用區') inventoryCache[log.itemName] += q;
+          else if (log.actionType === '耗材領出' || log.actionType === '器材借出') inventoryCache[log.itemName] -= q;
+          else if (log.actionType === '未用退回' || log.actionType === '器材歸還' || log.actionType === '歸還/退回') inventoryCache[log.itemName] += q;
+        }
+      });
+
       let html = '<option value="" disabled selected>請選擇領用物資...</option>';
       
       const categories = [...new Set(baseItems.map(i => i.category))];
@@ -209,6 +236,12 @@
 
       // 取得選擇品項的單位
       const selectedItem = baseItems.find(i => i.name === itemSelect.value);
+      
+      // 自動判斷歸還的類型是耗材還是器材，以利總表精確對帳
+      let finalActionType = document.getElementById('actionType').value;
+      if (finalActionType === '歸還/退回') {
+         finalActionType = (selectedItem && selectedItem.category === '非耗材(器材)') ? '器材歸還' : '未用退回';
+      }
 
       const payload = {
         action: 'add',
@@ -216,7 +249,7 @@
         eventName: document.getElementById('eventName').value,
         unit: document.getElementById('unit').value.trim(),
         user: document.getElementById('user').value.trim(),
-        actionType: document.getElementById('actionType').value,
+        actionType: finalActionType,
         itemName: itemSelect.value,
         qty: document.getElementById('qty').value,
         unitName: selectedItem ? selectedItem.unit : '件',
