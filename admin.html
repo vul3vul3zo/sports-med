@@ -81,7 +81,6 @@
             }
 
             tbody.innerHTML = '';
-            // 反轉讓最新一筆顯示在最上方
             dataList.reverse().forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b hover:bg-slate-50";
@@ -103,7 +102,6 @@
             });
         }
 
-        // 頁面載入時自動抓取一次
         window.onload = function() {
             fetchCloudLogs();
         };
