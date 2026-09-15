@@ -1,134 +1,656 @@
-/**
- * 運動防護物資管理系統 - 絕對防呆過濾版 (Code.gs)
- */
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>總表後台管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-active { border-bottom: 4px solid #0d9488; color: #0d9488; font-weight: bold; }
+        .tab-inactive { color: #64748b; font-weight: 600; }
+        .tab-inactive:hover { color: #0f766e; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col">
 
-function appendRecord(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[0];
+    <header class="bg-slate-900 text-white shadow-md z-10 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between overflow-x-auto">
+            <div class="flex items-center gap-3 shrink-0">
+                <span class="text-2xl">🛡️</span>
+                <h1 class="text-lg font-bold tracking-wide">防護物資總管後台</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0 pl-4">
+                <div class="bg-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2 border border-slate-700">
+                    <span class="text-xs text-slate-400 font-bold">當前活動:</span>
+                    <select id="eventSelect" onchange="changeEvent()" class="bg-transparent text-sm font-bold text-white outline-none cursor-pointer">
+                        <option value="所有計畫總表">🌐 所有計畫總表</option>
+                        <option value="115全民運">115全民運</option>
+                        <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
+                        <option value="桃園計畫隨隊">桃園計畫隨隊</option>
+                    </select>
+                </div>
+                <button onclick="fetchFromCloud()" id="syncBtn" class="bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg transition-all">
+                    <span>⚡</span> 從雲端同步刷新
+                </button>
+            </div>
+        </div>
+    </header>
 
-  // 嚴格防呆過濾：如果是空的、未指定的、或沒有品項名稱，絕對不准寫入試算表！
-  var itemName = data.itemName ? String(data.itemName).trim() : '';
-  if (!itemName || itemName === '未指定品項' || itemName === 'undefined' || itemName === 'null') {
-    return { status: "ignored", message: "Skipped empty or unspecified item." };
-  }
+    <div class="bg-white border-b border-slate-200 shadow-sm flex-shrink-0 overflow-x-auto">
+        <div class="max-w-7xl mx-auto px-4 flex gap-6">
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-active py-4 px-2 text-sm transition whitespace-nowrap">📊 庫存與校正</button>
+            <button onclick="switchTab('reconciliation')" id="tab-reconciliation" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap">🏢 單位領還對帳</button>
+            <button onclick="switchTab('logs')" id="tab-logs" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap">📑 流水明細</button>
+            <button onclick="openModal('newEventModal')" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap text-teal-600">➕ 新增活動專案</button>
+            <button onclick="openModal('newItemModal')" class="tab-inactive py-4 px-2 text-sm transition whitespace-nowrap text-indigo-600">➕ 新增物資品項</button>
+        </div>
+    </div>
 
-  // 若第一列沒有標題，自動建立標準表頭
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      "登記時間",
-      "活動專案",
-      "借領單位",
-      "登記人員",
-      "動作類型",
-      "品項名稱",
-      "數量",
-      "單位",
-      "備註說明"
-    ]);
-  }
+    <main class="flex-1 overflow-auto p-4 md:p-6 max-w-7xl mx-auto w-full">
+        
+        <!-- Tab 1: Inventory -->
+        <div id="view-inventory" class="fade-in space-y-6 block">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-sm text-slate-500 font-bold mb-1">主庫存 (大倉) 總量</div>
+                    <div class="text-3xl font-black text-indigo-600" id="totalWarehouse">0</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-sm text-slate-500 font-bold mb-1">領用區現貨 (供前線取用)</div>
+                    <div class="text-3xl font-black text-teal-600" id="totalPickup">0</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-sm text-slate-500 font-bold mb-1">器材外借中 (未歸還)</div>
+                    <div class="text-3xl font-black text-amber-600" id="totalBorrowed">0</div>
+                </div>
+            </div>
 
-  var timeStr = data.time || Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
-  var eventName = data.eventName || '隨隊活動';
-  var unit = data.unit || '現場組別';
-  var user = data.user || '現場防護員';
-  var actionType = data.actionType || '領出';
-  var qty = Number(data.qty) || 1;
-  var unitName = data.unitName || '件';
-  var note = data.note || '';
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">📦 <span id="inventoryTitleEvent">所有計畫總表</span> - 庫存總表</h2>
+                        <p class="text-xs text-slate-500 mt-1" id="inventoryHelpText">點擊右側「✏️ 校正」可直接寫入初始數量 (註：若要進行校正與撥發，請先切換至特定專案)</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                <th class="py-3 px-4">分類</th>
+                                <th class="py-3 px-4">物資品項</th>
+                                <th class="py-3 px-4 text-center">主庫存 (大倉)</th>
+                                <th class="py-3 px-4 text-center">領用區現貨</th>
+                                <th class="py-3 px-4 text-center">外借中</th>
+                                <th class="py-3 px-4 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-  // 正常寫入有效資料
-  sheet.appendRow([
-    timeStr,
-    eventName,
-    unit,
-    user,
-    actionType,
-    itemName,
-    qty,
-    unitName,
-    note
-  ]);
+        <!-- Tab 2: Reconciliation -->
+        <div id="view-reconciliation" class="fade-in hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">🏢 各單位領還與結算對帳單</h2>
+                <div id="reconciliationContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Units -->
+                </div>
+            </div>
+        </div>
 
-  SpreadsheetApp.flush();
+        <!-- Tab 3: Logs -->
+        <div id="view-logs" class="fade-in hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-slate-800">📑 全場雲端流水帳</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                <th class="py-3 px-4">時間</th>
+                                <th class="py-3 px-4">活動</th>
+                                <th class="py-3 px-4">單位/人員</th>
+                                <th class="py-3 px-4">動作</th>
+                                <th class="py-3 px-4">品項</th>
+                                <th class="py-3 px-4 text-center">數量</th>
+                                <th class="py-3 px-4">備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
 
-  return {
-    status: "success",
-    row: sheet.getLastRow(),
-    time: timeStr
-  };
-}
+    <!-- Calibrate Modal -->
+    <div id="calibrateModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">✏️ 填寫 / 校正庫存數量</h3>
+            <p class="text-sm font-bold text-indigo-600 mb-4" id="calItemName"></p>
+            <form onsubmit="submitCalibrate(event)" class="space-y-4">
+                <input type="hidden" id="calItemNameInput">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">主庫存 (大倉) 數量</label>
+                    <input type="number" id="calWarehouseQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">現場領用區 數量 (供前線領取)</label>
+                    <input type="number" id="calPickupQty" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('calibrateModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold text-slate-700 hover:bg-slate-300">取消</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700">確認送出雲端</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-function doGet(e) {
-  try {
-    var params = (e && e.parameter) ? e.parameter : {};
-    
-    // Support quick write through GET
-    if (params.action === 'add' || (params.itemName && params.qty)) {
-      var writeResult = appendRecord(params);
-      if (params.callback) {
-        return ContentService.createTextOutput(params.callback + '(' + JSON.stringify(writeResult) + ')')
-          .setMimeType(ContentService.MimeType.JAVASCRIPT);
-      }
-      return ContentService.createTextOutput(JSON.stringify(writeResult))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+    <!-- Transfer Modal -->
+    <div id="transferModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">🔄 從大倉撥發至領用區</h3>
+            <p class="text-sm font-bold text-teal-600 mb-2" id="transItemName"></p>
+            <p class="text-xs text-slate-500 mb-4">大倉目前剩餘: <span id="transAvailable" class="font-bold text-slate-800"></span></p>
+            <form onsubmit="submitTransfer(event)" class="space-y-4">
+                <input type="hidden" id="transItemNameInput">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">本次撥發數量</label>
+                    <input type="number" id="transQty" min="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('transferModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold text-slate-700 hover:bg-slate-300">取消</button>
+                    <button type="submit" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-bold hover:bg-teal-700">確認撥發</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheets()[0];
-    var rows = sheet.getDataRange().getValues();
-    var resultList = [];
+    <!-- New Event Modal -->
+    <div id="newEventModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">➕ 新增活動專案</h3>
+            <form onsubmit="submitNewEvent(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">活動名稱</label>
+                    <input type="text" id="newEventName" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500" placeholder="例如：全中運防護支援">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('newEventModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold text-slate-700 hover:bg-slate-300">取消</button>
+                    <button type="submit" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-bold hover:bg-teal-700">新增活動</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    // Parse records from sheet
-    for (var i = 1; i < rows.length; i++) {
-      var row = rows[i];
-      if (!row[0] || !row[5] || String(row[5]) === '未指定品項') continue;
-      resultList.push({
-        time: row[0] instanceof Date ? Utilities.formatDate(row[0], "Asia/Taipei", "yyyy/MM/dd HH:mm:ss") : String(row[0]),
-        eventName: String(row[1] || ''),
-        unit: String(row[2] || ''),
-        user: String(row[3] || ''),
-        actionType: String(row[4] || ''),
-        itemName: String(row[5] || ''),
-        qty: Number(row[6]) || 0,
-        unitName: String(row[7] || ''),
-        note: String(row[8] || '')
-      });
-    }
+    <!-- New Item Modal -->
+    <div id="newItemModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">➕ 新增物資品項</h3>
+            <form onsubmit="submitNewItem(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">品項分類</label>
+                    <select id="newItemCategory" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500">
+                        <option value="貼紮用品">貼紮用品</option>
+                        <option value="外傷處理">外傷處理</option>
+                        <option value="其它">其它耗材</option>
+                        <option value="非耗材(器材)">非耗材(器材)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">品項名稱</label>
+                    <input type="text" id="newItemName" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500" placeholder="例如：透氣貼布">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">計量單位</label>
+                    <input type="text" id="newItemUnit" required class="w-full border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500" placeholder="例如：卷、片、個">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('newItemModal')" class="flex-1 bg-slate-200 py-2 rounded-lg font-bold text-slate-700 hover:bg-slate-300">取消</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700">確認新增品項</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    var jsonString = JSON.stringify({ status: "success", data: resultList });
-    var callback = params.callback;
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50 text-sm font-bold text-center whitespace-nowrap">
+        Message
+    </div>
 
-    // Return JSONP for cross-origin frontend requests
-    if (callback) {
-        return ContentService.createTextOutput(callback + '(' + jsonString + ')')
-          .setMimeType(ContentService.MimeType.JAVASCRIPT);
-    }
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycby2Zn8aQivYlJW9gCPScQ6yd9H-7cc-qFt-2_CN-oHAtf1XJ8cYwIU6n18dU4mOh0Tx/exec";
 
-    return ContentService.createTextOutput(jsonString)
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        const baseItems = [
+            { name: '皮膚保護膜-2.75 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '運動貼布-1.5 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '輕型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '重型彈性貼布-2 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '重型彈性貼布-3 吋寬', category: '貼紮用品', unit: '卷' },
+            { name: '肌內效貼布', category: '貼紮用品', unit: '卷' },
+            { name: '膚色自黏貼布', category: '貼紮用品', unit: '卷' },
+            { name: '動態貼布-2 吋', category: '貼紮用品', unit: '卷' },
+            { name: '動態貼布-3 吋', category: '貼紮用品', unit: '卷' },
+            { name: '史崔普肌動態活力貼-2 吋', category: '貼紮用品', unit: '卷' },
+            { name: '史崔普肌動態活力貼-3 吋', category: '貼紮用品', unit: '卷' },
+            { name: '高密度黏性保護墊-1/8 吋厚', category: '貼紮用品', unit: '片' },
+            { name: '高密度黏性保護墊-1/4 吋厚', category: '貼紮用品', unit: '片' },
+            { name: '水泡護墊(2nd Skin)', category: '外傷處理', unit: '片' },
+            { name: '鼻血止血棉棒', category: '外傷處理', unit: '支' },
+            { name: '酒精棉片', category: '外傷處理', unit: '片' },
+            { name: '優碘棉片', category: '外傷處理', unit: '片' },
+            { name: '防水透氣 OK 繃-一般型', category: '外傷處理', unit: '片' },
+            { name: '防水透氣 OK 繃-大型', category: '外傷處理', unit: '片' },
+            { name: '生理食鹽水（小）', category: '外傷處理', unit: '瓶' },
+            { name: '3M 透氣紙膠 1 吋', category: '外傷處理', unit: '卷' },
+            { name: '3*3 吋滅菌紗布墊 (2 片裝)', category: '外傷處理', unit: '包' },
+            { name: '檢診手套(無粉)', category: '外傷處理', unit: '隻' },
+            { name: '乾洗手', category: '外傷處理', unit: '瓶' },
+            { name: '滅菌傷口清洗棉棒', category: '外傷處理', unit: '包' },
+            { name: '冰敷用塑膠袋', category: '其它', unit: '包' },
+            { name: '冰敷膠膜', category: '其它', unit: '卷' },
+            { name: '熱身用運動軟膏', category: '其它', unit: '瓶' },
+            { name: '4 吋加長型彈繃', category: '其它', unit: '卷' },
+            { name: '防護包', category: '非耗材(器材)', unit: '個' },
+            { name: '冰桶-大', category: '非耗材(器材)', unit: '個' },
+            { name: '冰桶-中', category: '非耗材(器材)', unit: '個' },
+            { name: '可調式頸圈', category: '非耗材(器材)', unit: '個' },
+            { name: '折疊處理床', category: '非耗材(器材)', unit: '個' },
+            { name: '捲式鋁製夾板', category: '非耗材(器材)', unit: '卷' },
+            { name: '三折式關節夾板', category: '非耗材(器材)', unit: '個' },
+            { name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條' }
+        ];
 
-function doPost(e) {
-  try {
-    var data = {};
-    if (e && e.postData && e.postData.contents) {
-      try {
-        data = JSON.parse(e.postData.contents);
-      } catch (err) {
-        data = (e && e.parameter) ? e.parameter : {};
-      }
-    } else if (e && e.parameter) {
-      data = e.parameter;
-    }
-    var result = appendRecord(data);
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        let currentEvent = "所有計畫總表";
+        let globalLogs = [];
+        let currentInventory = [];
+
+        window.onload = function() {
+            fetchFromCloud();
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100', '-translate-y-4');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+                toast.classList.remove('opacity-100', '-translate-y-4');
+            }, 3000);
+        }
+
+        function switchTab(tabId) {
+            ['inventory', 'reconciliation', 'logs'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                document.getElementById(`tab-${id}`).className = 'tab-inactive py-4 px-2 text-sm transition whitespace-nowrap';
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).className = 'tab-active py-4 px-2 text-sm transition whitespace-nowrap';
+        }
+
+        function changeEvent() {
+            currentEvent = document.getElementById('eventSelect').value;
+            document.getElementById('inventoryTitleEvent').innerText = currentEvent;
+            
+            if(currentEvent === "所有計畫總表") {
+                document.getElementById('inventoryHelpText').innerText = "點擊右側「✏️ 校正」可直接寫入初始數量 (註：若要進行校正與撥發，請先切換至特定專案)";
+            } else {
+                document.getElementById('inventoryHelpText').innerText = "您可以在此專案下進行盤點校正與撥發";
+            }
+            
+            processData();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.replace('hidden', 'flex');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.replace('flex', 'hidden');
+        }
+
+        function fetchFromCloud() {
+            const btn = document.getElementById('syncBtn');
+            btn.innerHTML = "🔄 同步中...";
+            
+            const callbackName = 'jsonp_cb_' + Date.now();
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=read&callback=${callbackName}`;
+
+            window[callbackName] = function(response) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                if (response && response.status === "success") {
+                    globalLogs = response.data || [];
+                    
+                    // Extract unique events to populate dropdown
+                    let uniqueEvents = new Set(["所有計畫總表", "115全民運", "苗栗計畫隨隊", "桃園計畫隨隊"]);
+                    globalLogs.forEach(log => {
+                        if(log.eventName && log.eventName !== '所有計畫總表') {
+                            uniqueEvents.add(log.eventName);
+                        }
+                    });
+                    
+                    const sel = document.getElementById('eventSelect');
+                    sel.innerHTML = Array.from(uniqueEvents).map(e => `<option value="${e}" ${e === currentEvent ? 'selected' : ''}>${e === '所有計畫總表' ? '🌐 所有計畫總表' : e}</option>`).join('');
+                    
+                    processData();
+                    showToast("✅ 資料同步完成！");
+                } else {
+                    showToast("❌ 同步失敗");
+                }
+                btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
+            };
+            
+            script.onerror = function() {
+                showToast("❌ 網路連線錯誤");
+                btn.innerHTML = "<span>⚡</span> 從雲端同步刷新";
+            };
+            
+            document.body.appendChild(script);
+        }
+
+        function processData() {
+            currentInventory = baseItems.map(item => ({ ...item, warehouseQty: 0, pickupQty: 0, borrowedQty: 0 }));
+            
+            // Add dynamically added items
+            globalLogs.forEach(log => {
+                if (log.actionType === '新增品項設定') {
+                    let parts = (log.note || '其它|件').split('|');
+                    if (!currentInventory.find(i => i.name === log.itemName)) {
+                        currentInventory.push({ name: log.itemName, category: parts[0], unit: parts[1], warehouseQty: 0, pickupQty: 0, borrowedQty: 0 });
+                    }
+                }
+            });
+
+            let eventLogs = globalLogs;
+            if (currentEvent !== "所有計畫總表") {
+                eventLogs = globalLogs.filter(log => log.eventName === currentEvent || log.actionType === '新增品項設定');
+            }
+
+            let unitsData = {};
+
+            eventLogs.forEach(log => {
+                let item = currentInventory.find(i => i.name === log.itemName);
+                if (!item) return;
+                
+                let q = Number(log.qty);
+                
+                if (log.actionType === '後台盤點校正(大倉)') {
+                    item.warehouseQty += (log.note === '減少' ? -q : q);
+                } else if (log.actionType === '後台盤點校正(領用區)') {
+                    item.pickupQty += (log.note === '減少' ? -q : q);
+                } else if (log.actionType === '撥發至領用區') {
+                    item.warehouseQty -= q; 
+                    item.pickupQty += q;
+                } else if (log.actionType === '耗材領出') {
+                    item.pickupQty -= q;
+                } else if (log.actionType === '器材借出') {
+                    item.pickupQty -= q; 
+                    item.borrowedQty += q;
+                } else if (log.actionType === '未使用退回' || log.actionType === '器材歸還' || log.actionType === '未用退回') {
+                    item.pickupQty += q; 
+                    item.borrowedQty = Math.max(0, item.borrowedQty - q);
+                }
+
+                if (log.unit && log.unit !== '總部管理' && log.eventName !== '所有計畫總表') {
+                    if (!unitsData[log.unit]) unitsData[log.unit] = {};
+                    if (!unitsData[log.unit][log.itemName]) unitsData[log.unit][log.itemName] = { out: 0, ret: 0 };
+                    
+                    if (log.actionType === '耗材領出' || log.actionType === '器材借出') unitsData[log.unit][log.itemName].out += q;
+                    if (log.actionType === '未使用退回' || log.actionType === '器材歸還' || log.actionType === '未用退回') unitsData[log.unit][log.itemName].ret += q;
+                }
+            });
+
+            renderInventory();
+            renderReconciliation(unitsData);
+            renderLogs(eventLogs);
+        }
+
+        function renderInventory() {
+            const tbody = document.getElementById('inventoryTableBody');
+            let wSum = 0, pSum = 0, bSum = 0;
+            const isAllEvent = currentEvent === "所有計畫總表";
+            
+            tbody.innerHTML = currentInventory.map(item => {
+                wSum += item.warehouseQty; 
+                pSum += item.pickupQty; 
+                bSum += item.borrowedQty;
+                
+                let actionButtons = '';
+                if (!isAllEvent) {
+                    actionButtons = `<button onclick="openCalibrateModal('${item.name}')" class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-200">✏️ 校正</button>`;
+                    if (item.category !== '非耗材(器材)') {
+                        actionButtons += `<button onclick="openTransferModal('${item.name}')" class="bg-teal-100 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-teal-200 ml-1">🔄 撥發</button>`;
+                    }
+                } else {
+                    actionButtons = `<span class="text-xs text-slate-400">請切換專案</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4"><span class="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full font-bold">${item.category}</span></td>
+                        <td class="py-3 px-4 font-bold text-slate-800">${item.name}</td>
+                        <td class="py-3 px-4 text-center font-black text-indigo-600">${item.warehouseQty}</td>
+                        <td class="py-3 px-4 text-center font-black text-teal-600">${item.pickupQty}</td>
+                        <td class="py-3 px-4 text-center font-black text-amber-600">${item.borrowedQty}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">${actionButtons}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('totalWarehouse').innerText = wSum;
+            document.getElementById('totalPickup').innerText = pSum;
+            document.getElementById('totalBorrowed').innerText = bSum;
+        }
+
+        function renderReconciliation(unitsData) {
+            const container = document.getElementById('reconciliationContainer');
+            container.innerHTML = '';
+            
+            if (currentEvent === "所有計畫總表") {
+                container.innerHTML = `<div class="col-span-full p-4 text-center text-slate-500 font-bold">請選擇特定活動專案以查看單位對帳</div>`;
+                return;
+            }
+
+            if (Object.keys(unitsData).length === 0) {
+                container.innerHTML = `<div class="col-span-full p-4 text-center text-slate-400">目前尚無單位借領紀錄</div>`;
+                return;
+            }
+
+            for (let unit in unitsData) {
+                let detailsHtml = '';
+                for (let itemName in unitsData[unit]) {
+                    let itemObj = currentInventory.find(i => i.name === itemName);
+                    let d = unitsData[unit][itemName];
+                    let net = d.out - d.ret;
+                    if (d.out === 0 && d.ret === 0) continue;
+                    
+                    let statusText = '';
+                    if (itemObj && itemObj.category === '非耗材(器材)') {
+                        statusText = net > 0 ? `<span class="text-red-500 font-bold">尚欠 ${net} 未還</span>` : `<span class="text-emerald-500">結清歸還</span>`;
+                    } else {
+                        statusText = `<span class="text-slate-500">消耗 ${net}</span>`;
+                    }
+
+                    detailsHtml += `
+                        <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 text-sm">
+                            <span class="font-bold text-slate-700">${itemName}</span>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 mr-2">借/領: ${d.out} | 退/還: ${d.ret}</span>
+                                ${statusText}
+                            </div>
+                        </div>`;
+                }
+
+                if (detailsHtml) {
+                    container.innerHTML += `
+                        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                            <h3 class="font-bold text-slate-800 text-lg mb-3 flex items-center gap-2">🚩 ${unit}</h3>
+                            ${detailsHtml}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderLogs(eventLogs) {
+            const tbody = document.getElementById('logsTableBody');
+            const filtered = eventLogs.filter(log => log.actionType !== '新增品項設定').reverse();
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">目前尚無紀錄</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(row => `
+                <tr class="hover:bg-slate-50">
+                    <td class="py-2 px-4 text-xs text-slate-500 whitespace-nowrap">${row.time}</td>
+                    <td class="py-2 px-4 text-xs">${row.eventName}</td>
+                    <td class="py-2 px-4 font-bold text-xs">${row.unit}<br><span class="text-slate-400 font-normal">${row.user}</span></td>
+                    <td class="py-2 px-4 text-xs font-bold text-indigo-600">${row.actionType}</td>
+                    <td class="py-2 px-4 font-bold">${row.itemName}</td>
+                    <td class="py-2 px-4 text-center font-bold">${row.qty}</td>
+                    <td class="py-2 px-4 text-xs text-slate-400">${row.note}</td>
+                </tr>
+            `).join('');
+        }
+
+        function openCalibrateModal(name) {
+            const item = currentInventory.find(i => i.name === name);
+            document.getElementById('calItemNameInput').value = name;
+            document.getElementById('calItemName').innerText = item.name;
+            document.getElementById('calWarehouseQty').value = item.warehouseQty;
+            document.getElementById('calPickupQty').value = item.pickupQty;
+            openModal('calibrateModal');
+        }
+        
+        function openTransferModal(name) {
+            const item = currentInventory.find(i => i.name === name);
+            document.getElementById('transItemNameInput').value = name;
+            document.getElementById('transItemName').innerText = item.name;
+            document.getElementById('transAvailable').innerText = item.warehouseQty;
+            document.getElementById('transQty').max = item.warehouseQty;
+            document.getElementById('transQty').value = '';
+            openModal('transferModal');
+        }
+
+        function submitCalibrate(e) {
+            e.preventDefault();
+            const name = document.getElementById('calItemNameInput').value;
+            const item = currentInventory.find(i => i.name === name);
+            const newW = Number(document.getElementById('calWarehouseQty').value);
+            const newP = Number(document.getElementById('calPickupQty').value);
+            const diffW = newW - item.warehouseQty;
+            const diffP = newP - item.pickupQty;
+            
+            if(diffW !== 0) sendToCloud('後台盤點校正(大倉)', item.name, Math.abs(diffW), item.unit, diffW > 0 ? '增加' : '減少');
+            if(diffP !== 0) sendToCloud('後台盤點校正(領用區)', item.name, Math.abs(diffP), item.unit, diffP > 0 ? '增加' : '減少');
+            
+            closeModal('calibrateModal');
+            showToast('✅ 數量已校正送出！雲端處理中...');
+            setTimeout(fetchFromCloud, 2000);
+        }
+
+        function submitTransfer(e) {
+            e.preventDefault();
+            const name = document.getElementById('transItemNameInput').value;
+            const item = currentInventory.find(i => i.name === name);
+            const qty = Number(document.getElementById('transQty').value);
+            
+            if (qty > item.warehouseQty) {
+                showToast('❌ 撥發數量不可大於大倉剩餘量！');
+                return;
+            }
+            
+            sendToCloud('撥發至領用區', item.name, qty, item.unit, '從大倉扣除，增加至領用區');
+            closeModal('transferModal');
+            showToast('✅ 成功撥發！雲端處理中...');
+            setTimeout(fetchFromCloud, 2000);
+        }
+
+        function submitNewEvent(e) {
+            e.preventDefault();
+            const val = document.getElementById('newEventName').value.trim();
+            if (val) {
+                sendToCloud('建立活動專案', '系統通知', 1, '件', val);
+                const sel = document.getElementById('eventSelect');
+                if(!Array.from(sel.options).find(opt => opt.value === val)) {
+                    sel.add(new Option(val, val));
+                }
+                sel.value = val;
+                changeEvent();
+                showToast('✅ 活動新增成功！');
+            }
+            closeModal('newEventModal');
+        }
+
+        function submitNewItem(e) {
+            e.preventDefault();
+            const category = document.getElementById('newItemCategory').value;
+            const name = document.getElementById('newItemName').value.trim();
+            const unit = document.getElementById('newItemUnit').value.trim();
+            
+            if(name && unit) {
+                sendToCloud('新增品項設定', name, 0, unit, `${category}|${unit}`);
+                showToast('✅ 品項新增成功！系統更新中...');
+                closeModal('newItemModal');
+                
+                // Clear form
+                document.getElementById('newItemName').value = '';
+                document.getElementById('newItemUnit').value = '';
+                
+                setTimeout(fetchFromCloud, 2000);
+            }
+        }
+
+        function sendToCloud(actionType, itemName, qty, unitName, note) {
+            const frameName = 'cloud_frame_' + Date.now();
+            const iframe = document.createElement('iframe');
+            iframe.name = frameName;
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = API_URL;
+            form.target = frameName;
+            form.style.display = 'none';
+
+            const payload = {
+                time: new Date().toLocaleString('zh-TW', { hour12: false }),
+                eventName: currentEvent === "所有計畫總表" ? "全域設定" : currentEvent,
+                unit: '總部管理',
+                user: '系統管理員',
+                actionType: actionType,
+                itemName: itemName,
+                qty: qty,
+                unitName: unitName,
+                note: note
+            };
+
+            Object.keys(payload).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = payload[key];
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+            
+            setTimeout(() => { 
+                document.body.removeChild(form); 
+                document.body.removeChild(iframe); 
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
