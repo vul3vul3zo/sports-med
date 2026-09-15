@@ -26,6 +26,7 @@
         <div class="bg-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2 border border-slate-700">
           <span class="text-xs text-slate-400 font-bold">當前活動:</span>
           <select id="eventSelect" onchange="changeEvent()" class="bg-transparent text-sm font-bold text-white outline-none cursor-pointer">
+            <option value="所有計畫總表">🌐 所有計畫總表</option>
             <option value="苗栗計畫隨隊">苗栗計畫隨隊</option>
             <option value="桃園計畫隨隊">桃園計畫隨隊</option>
           </select>
@@ -68,8 +69,8 @@
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
           <div>
-            <h2 class="text-lg font-bold text-slate-800">📦 <span id="inventoryTitleEvent">苗栗計畫隨隊</span> - 庫存總表</h2>
-            <p class="text-xs text-slate-500 mt-1">點擊右側「✏️ 校正」可直接寫入初始數量，寫入後手機立刻同步</p>
+            <h2 class="text-lg font-bold text-slate-800">📦 <span id="inventoryTitleEvent">所有計畫總表</span> - 庫存總表</h2>
+            <p class="text-xs text-slate-500 mt-1">點擊右側「✏️ 校正」可直接寫入初始數量 (註：若要進行校正與撥發，請先切換至特定專案)</p>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -231,7 +232,7 @@
       { id: 'e8', name: '肢體固定三角巾', category: '非耗材(器材)', unit: '條' }
     ];
 
-    let currentEvent = "苗栗計畫隨隊";
+    let currentEvent = "所有計畫總表";
     let globalLogs = [];
     let currentInventory = [];
 
@@ -303,7 +304,12 @@
     function processData() {
       // 初始化歸零
       currentInventory = baseItems.map(item => ({ ...item, warehouseQty: 0, pickupQty: 0, borrowedQty: 0 }));
-      let eventLogs = globalLogs.filter(log => log.eventName === currentEvent);
+      
+      // 如果選擇所有計畫總表，則抓取全部紀錄，否則過濾出該計畫的紀錄
+      let eventLogs = currentEvent === "所有計畫總表" 
+        ? globalLogs 
+        : globalLogs.filter(log => log.eventName === currentEvent);
+        
       let unitsData = {};
 
       eventLogs.forEach(log => {
@@ -344,6 +350,18 @@
       
       tbody.innerHTML = currentInventory.map(item => {
         wSum += item.warehouseQty; pSum += item.pickupQty; bSum += item.borrowedQty;
+        
+        // 只有在特定活動下才允許校正與撥發，避免全域修改造成資料錯亂
+        let actionButtons = '';
+        if (currentEvent !== '所有計畫總表') {
+          actionButtons = `
+            <button onclick="openCalibrateModal('${item.id}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">✏️ 校正</button>
+            ${item.category !== '非耗材(器材)' ? `<button onclick="openTransferModal('${item.id}')" class="bg-teal-100 hover:bg-teal-200 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">🔄 撥發</button>` : ''}
+          `;
+        } else {
+          actionButtons = `<span class="text-xs text-slate-400 font-bold">請先選擇特定活動</span>`;
+        }
+
         return `
           <tr class="hover:bg-slate-50 transition">
             <td class="py-3 px-4"><span class="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full font-bold">${item.category}</span></td>
@@ -352,8 +370,7 @@
             <td class="py-3 px-4 text-center font-black text-teal-600">${item.pickupQty}</td>
             <td class="py-3 px-4 text-center font-black text-amber-600">${item.borrowedQty}</td>
             <td class="py-3 px-4 text-center space-x-2">
-              <button onclick="openCalibrateModal('${item.id}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">✏️ 校正</button>
-              ${item.category !== '非耗材(器材)' ? `<button onclick="openTransferModal('${item.id}')" class="bg-teal-100 hover:bg-teal-200 text-teal-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">🔄 撥發</button>` : ''}
+              ${actionButtons}
             </td>
           </tr>
         `;
@@ -404,7 +421,10 @@
 
     function renderLogs() {
       const tbody = document.getElementById('logsTableBody');
-      const filtered = globalLogs.filter(log => log.eventName === currentEvent).reverse();
+      const filtered = currentEvent === "所有計畫總表" 
+        ? globalLogs.slice().reverse() 
+        : globalLogs.filter(log => log.eventName === currentEvent).reverse();
+        
       if(filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">目前活動尚無紀錄</td></tr>`;
         return;
